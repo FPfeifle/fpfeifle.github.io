@@ -314,6 +314,20 @@
     </div>
   </div>
 
+  <div class="panel-section" id="emitter-settings" style="display:none">
+    <div class="section-title">Emitter Settings</div>
+    <div class="slider-row">
+      <span class="slider-label">Amplitude</span>
+      <input type="range" id="sl-emit-amp" min="1" max="100" value="30" step="1">
+      <span class="slider-val" id="sv-emit-amp">0.30</span>
+    </div>
+    <div class="slider-row">
+      <span class="slider-label">Frequency</span>
+      <input type="range" id="sl-emit-freq" min="5" max="100" value="25" step="1">
+      <span class="slider-val" id="sv-emit-freq">2.5</span>
+    </div>
+  </div>
+
   <div id="status">initializing webgl…</div>
 </div>
 
@@ -337,6 +351,8 @@ const state = {
   bgWaves:      true,
   openEdges:    false,
   drawMode:     'wall',
+  emitterAmp:   0.30,
+  emitterFreq:  2.5,
   lightType:    'Point',
   lightXY:      [2.0, 2.0],
   circleRadius: 3.0,
@@ -407,16 +423,19 @@ if (!USE_WEBGL) {
 //  CPU FALLBACK ENGINE
 // ═══════════════════════════════════════════════════════════════════
 let cpu_h0, cpu_h1, cpu_vel, cpu_hPrev, cpu_obsMask, cpu_emitMask;
+let cpu_emitAmp, cpu_emitFreq; // per-cell emitter properties
 let cpu_imageData, cpu_pixBuf, cpu_ctx;
 
 function cpu_initArrays() {
   const N = GRID * GRID;
-  cpu_h0      = new Float32Array(N);
-  cpu_h1      = new Float32Array(N);
-  cpu_vel     = new Float32Array(N);
-  cpu_hPrev   = new Float32Array(N);
-  cpu_obsMask = new Uint8Array(N);
-  cpu_emitMask= new Uint8Array(N);
+  cpu_h0       = new Float32Array(N);
+  cpu_h1       = new Float32Array(N);
+  cpu_vel      = new Float32Array(N);
+  cpu_hPrev    = new Float32Array(N);
+  cpu_obsMask  = new Uint8Array(N);
+  cpu_emitMask = new Uint8Array(N);
+  cpu_emitAmp  = new Float32Array(N);
+  cpu_emitFreq = new Float32Array(N);
 }
 
 function cpu_initCanvas() {
@@ -447,8 +466,12 @@ function cpu_stepPDE() {
   }
   // Absorb mode: border cells are frozen at 0 (never updated above), waves roll in and vanish
   [cpu_h0, cpu_h1] = [cpu_h1, cpu_h0];
-  const drive = 3.0*state.amplitude*Math.sin(2.5*state.time);
-  for (let i=0;i<GRID*GRID;i++) if (cpu_emitMask[i]) { cpu_h0[i]=drive; cpu_vel[i]=0; }
+  for (let i=0;i<GRID*GRID;i++) {
+    if (cpu_emitMask[i]) {
+      cpu_h0[i] = 3.0 * cpu_emitAmp[i] * Math.sin(cpu_emitFreq[i] * state.time);
+      cpu_vel[i] = 0;
+    }
+  }
 }
 
 function cpu_kelvinRGB(T) {
@@ -536,7 +559,7 @@ function cpu_commitShape(worldPts) {
   for(let i=0;i<GRID*GRID;i++) {
     if(!mask[i]) continue;
     if(state.drawMode==='wall'){cpu_obsMask[i]=1;cpu_emitMask[i]=0;cpu_h0[i]=0;cpu_vel[i]=0;}
-    else{cpu_emitMask[i]=1;cpu_obsMask[i]=0;}
+    else{cpu_emitMask[i]=1;cpu_obsMask[i]=0;cpu_emitAmp[i]=state.emitterAmp;cpu_emitFreq[i]=state.emitterFreq;}
   }
 }
 
@@ -550,7 +573,7 @@ function cpu_rasterisePolyline(worldPts,thickness) {
 
 function cpu_reset() {
   cpu_h0.fill(0);cpu_h1.fill(0);cpu_vel.fill(0);cpu_hPrev.fill(0);
-  cpu_obsMask.fill(0);cpu_emitMask.fill(0);
+  cpu_obsMask.fill(0);cpu_emitMask.fill(0);cpu_emitAmp.fill(0);cpu_emitFreq.fill(0);
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -597,7 +620,7 @@ uniform sampler2D u_mask;
 uniform vec2  u_texel;
 uniform float u_tension;
 uniform float u_damp;
-uniform float u_drive;
+uniform float u_time;
 uniform float u_openEdges;
 varying vec2 v_uv;
 
@@ -605,7 +628,14 @@ void main() {
   vec2 uv = v_uv;
   vec4 mask = texture2D(u_mask, uv);
   if (mask.r > 0.5) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
-  if (mask.g > 0.5) { gl_FragColor = vec4(u_drive, 0.0, 0.0, 1.0); return; }
+  if (mask.g > 0.5) {
+    // B channel: amplitude (0-255 -> 0-1), A channel: frequency (0-255 -> 0-10)
+    float amp  = mask.b * 1.0;
+    float freq = mask.a * 10.0;
+    float drive = 3.0 * amp * sin(freq * u_time);
+    gl_FragColor = vec4(drive, 0.0, 0.0, 1.0);
+    return;
+  }
 
   bool onL = uv.x < u_texel.x * 1.5;
   bool onR = uv.x > 1.0 - u_texel.x * 1.5;
@@ -910,7 +940,7 @@ function stepPDE() {
   u2f(progPDE, 'u_texel', 1/GRID, 1/GRID);
   u1f(progPDE, 'u_tension', TENSION);
   u1f(progPDE, 'u_damp', DAMP);
-  u1f(progPDE, 'u_drive', 3.0 * state.amplitude * Math.sin(2.5 * state.time));
+  u1f(progPDE, 'u_time', state.time);
   u1f(progPDE, 'u_openEdges', state.openEdges ? 1.0 : 0.0);
 
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -1008,8 +1038,13 @@ function drawOverlays() {
   oc.clearRect(0, 0, imgW, imgH);
 
   function w2img(wx, wy) {
-    // world Y is +up, screen Y is +down
-    return [(wx + VIEW) / (2*VIEW) * imgW, (1 - (wy + VIEW) / (2*VIEW)) * imgH];
+    // Exact inverse of canvasToWorld: world -> grid UV -> screen pixel
+    const margin = state.openEdges ? 0.20 : 0.0;
+    const uvX =  (wx / VIEW + 1.0) * 0.5;          // world -> grid UV x
+    const uvY = -(wy / VIEW - 1.0) * 0.5;           // world -> grid UV y (flip)
+    const sx = ((uvX - margin) / (1.0 - 2.0 * margin)) * imgW;
+    const sy = ((uvY - margin) / (1.0 - 2.0 * margin)) * imgH;
+    return [sx, sy];
   }
 
   oc.save();
@@ -1150,7 +1185,9 @@ function commitShape(worldPts) {
       if (state.drawMode === 'wall') {
         maskData[i*4]=255; maskData[i*4+1]=0; maskData[i*4+2]=0; maskData[i*4+3]=255;
       } else {
-        maskData[i*4]=0; maskData[i*4+1]=255; maskData[i*4+2]=0; maskData[i*4+3]=255;
+        maskData[i*4]=0; maskData[i*4+1]=255;
+        maskData[i*4+2]=Math.round(state.emitterAmp * 255);
+        maskData[i*4+3]=Math.round((state.emitterFreq / 10.0) * 255);
       }
     }
     uploadMask();
@@ -1166,17 +1203,18 @@ let drawing       = false;
 let drawPtsWorld  = [];
 let draggingLight = false;
 
-// Convert canvas pixel to world coords.
-// useMargin=true: accounts for the absorb-mode UV crop so ripples/walls land correctly.
-// useMargin=false: returns raw full-grid world coords, used for the light which lives
-//                  in full [-VIEW,+VIEW] space matching the shading shader.
-function canvasToWorld(ex, ey, useMargin = true) {
+// Convert canvas pixel -> grid UV (accounting for absorb-mode crop) -> world coords.
+// All coordinates (light, ripples, walls) share this same space, which matches
+// what the shading shader uses: world = (gridUV * 2 - 1) * VIEW.
+function canvasToWorld(ex, ey) {
   const rect = canvas.getBoundingClientRect();
   const px = ex - rect.left;
   const py = ey - rect.top;
-  const margin = (useMargin && state.openEdges) ? 0.20 : 0.0;
+  // Screen pixel -> grid UV: invert the copy shader's UV crop
+  const margin = state.openEdges ? 0.20 : 0.0;
   const uvX = margin + (px / rect.width)  * (1.0 - 2.0 * margin);
   const uvY = margin + (py / rect.height) * (1.0 - 2.0 * margin);
+  // Grid UV -> world
   const wx =  (uvX * 2.0 - 1.0) * VIEW;
   const wy = -((uvY * 2.0 - 1.0) * VIEW);
   return [wx, wy];
@@ -1197,29 +1235,27 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 canvas.addEventListener('mousedown', e => {
   e.preventDefault();
-  const [wx, wy] = canvasToWorld(e.clientX, e.clientY, false); // raw coords for light test
-  const [wxM, wyM] = canvasToWorld(e.clientX, e.clientY, true); // margin-aware for sim
+  const [wx, wy] = canvasToWorld(e.clientX, e.clientY);
   if (e.button === 2) {
     drawing = true;
-    drawPtsWorld = [[wxM, wyM]];
+    drawPtsWorld = [[wx, wy]];
   } else if (e.button === 0) {
     if (nearLight(wx, wy)) {
       draggingLight = true;
     } else {
-      if (USE_WEBGL) addRipple(wxM, wyM); else cpu_addRipple(wxM, wyM);
+      if (USE_WEBGL) addRipple(wx, wy); else cpu_addRipple(wx, wy);
     }
   }
 });
 
 canvas.addEventListener('mousemove', e => {
-  const [wx, wy]   = canvasToWorld(e.clientX, e.clientY, false); // raw for light drag
-  const [wxM, wyM] = canvasToWorld(e.clientX, e.clientY, true);  // margin-aware for draw
+  const [wx, wy] = canvasToWorld(e.clientX, e.clientY);
   if (drawing) {
     if (drawPtsWorld.length > 0) {
       const [lx, ly] = drawPtsWorld[drawPtsWorld.length-1];
-      if ((wxM-lx)**2 + (wyM-ly)**2 > 0.0025) drawPtsWorld.push([wxM, wyM]);
+      if ((wx-lx)**2 + (wy-ly)**2 > 0.0025) drawPtsWorld.push([wx, wy]);
     } else {
-      drawPtsWorld.push([wxM, wyM]);
+      drawPtsWorld.push([wx, wy]);
     }
   }
   if (draggingLight) {
@@ -1373,7 +1409,25 @@ document.getElementById('draw-mode-btn').addEventListener('click', function() {
   state.drawMode = state.drawMode === 'wall' ? 'emitter' : 'wall';
   this.textContent = state.drawMode === 'wall' ? 'Draw: WALL' : 'Draw: EMITTER';
   this.className   = state.drawMode === 'wall' ? 'wall-mode' : 'emit-mode';
+  document.getElementById('emitter-settings').style.display =
+    state.drawMode === 'emitter' ? 'block' : 'none';
 });
+
+// Emitter sliders
+(function() {
+  const slAmp  = document.getElementById('sl-emit-amp');
+  const svAmp  = document.getElementById('sv-emit-amp');
+  const slFreq = document.getElementById('sl-emit-freq');
+  const svFreq = document.getElementById('sv-emit-freq');
+  slAmp.addEventListener('input', () => {
+    state.emitterAmp = slAmp.value / 100;
+    svAmp.textContent = state.emitterAmp.toFixed(2);
+  });
+  slFreq.addEventListener('input', () => {
+    state.emitterFreq = slFreq.value / 10;
+    svFreq.textContent = state.emitterFreq.toFixed(1);
+  });
+})();
 
 // ═══════════════════════════════════════════════════════════════════
 //  RESIZE OBSERVER + START
