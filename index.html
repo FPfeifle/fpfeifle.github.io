@@ -233,24 +233,10 @@
     <canvas id="sim-canvas"></canvas>
     <canvas id="overlay-canvas"></canvas>
   </div>
-  <div id="hint">L-click: ripple &nbsp;|&nbsp; R-drag: draw &nbsp;|&nbsp; Drag ●: move light &nbsp;|&nbsp; Tilt/Az: 3D camera</div>
+  <div id="hint">L-click: ripple &nbsp;|&nbsp; R-drag: draw &nbsp;|&nbsp; Drag ●: move light</div>
 </div>
 
 <div id="panel">
-
-  <div class="panel-section">
-    <div class="section-title">Camera</div>
-    <div class="slider-row">
-      <span class="slider-label">Tilt °</span>
-      <input type="range" id="sl-tilt" min="0" max="70" value="0" step="1">
-      <span class="slider-val" id="sv-tilt">0</span>
-    </div>
-    <div class="slider-row">
-      <span class="slider-label">Azimuth °</span>
-      <input type="range" id="sl-azimuth" min="0" max="360" value="30" step="1">
-      <span class="slider-val" id="sv-azimuth">30</span>
-    </div>
-  </div>
 
   <div class="panel-section">
     <div class="section-title">Waves</div>
@@ -345,8 +331,6 @@ const state = {
   shininess:    30,
   lightHeight:  5.0,
   colorTemp:    6500,
-  tilt:         0,
-  azimuth:      30,
   paused:       false,
   time:         0,
   timeScale:    1,
@@ -457,19 +441,11 @@ function cpu_stepPDE() {
     }
   }
   if (!state.openEdges) {
-    for (let c=0;c<GRID;c++){cpu_h1[c]=0;cpu_h1[(GRID-1)*GRID+c]=0;cpu_vel[c]=0;cpu_vel[(GRID-1)*GRID+c]=0;}
-    for (let r=0;r<GRID;r++){cpu_h1[r*GRID]=0;cpu_h1[r*GRID+GRID-1]=0;cpu_vel[r*GRID]=0;cpu_vel[r*GRID+GRID-1]=0;}
-  } else {
-    const cv=Math.sqrt(CPU_TENSION), ref=(cv-1)/(cv+1);
-    for (let c=0;c<GRID;c++){
-      cpu_h1[0*GRID+c]        =cpu_hPrev[1*GRID+c]+ref*(cpu_h1[1*GRID+c]-cpu_hPrev[0*GRID+c]);
-      cpu_h1[(GRID-1)*GRID+c] =cpu_hPrev[(GRID-2)*GRID+c]+ref*(cpu_h1[(GRID-2)*GRID+c]-cpu_hPrev[(GRID-1)*GRID+c]);
-    }
-    for (let r=0;r<GRID;r++){
-      cpu_h1[r*GRID]      =cpu_hPrev[r*GRID+1]+ref*(cpu_h1[r*GRID+1]-cpu_hPrev[r*GRID]);
-      cpu_h1[r*GRID+GRID-1]=cpu_hPrev[r*GRID+GRID-2]+ref*(cpu_h1[r*GRID+GRID-2]-cpu_hPrev[r*GRID+GRID-1]);
-    }
+    // Reflecting: zero the border
+    for (let c=0;c<GRID;c++){cpu_h1[c]=0;cpu_vel[c]=0;cpu_h1[(GRID-1)*GRID+c]=0;cpu_vel[(GRID-1)*GRID+c]=0;}
+    for (let r=0;r<GRID;r++){cpu_h1[r*GRID]=0;cpu_vel[r*GRID]=0;cpu_h1[r*GRID+GRID-1]=0;cpu_vel[r*GRID+GRID-1]=0;}
   }
+  // Absorb mode: border cells are frozen at 0 (never updated above), waves roll in and vanish
   [cpu_h0, cpu_h1] = [cpu_h1, cpu_h0];
   const drive = 3.0*state.amplitude*Math.sin(2.5*state.time);
   for (let i=0;i<GRID*GRID;i++) if (cpu_emitMask[i]) { cpu_h0[i]=drive; cpu_vel[i]=0; }
@@ -529,8 +505,8 @@ function cpu_render() {
         bb=encode(0.16+diff+(sp+ca2)*lb);
       }
       // Write pixel block (scale grid to canvas)
-      const px0=Math.round(c*scaleX), px1=Math.round((c+1)*scaleX);
-      const py0=Math.round((GRID-1-r)*scaleY), py1=Math.round((GRID-r)*scaleY); // flip Y for display
+      const px0=Math.round(c*imgW/GRID), px1=Math.round((c+1)*imgW/GRID);
+      const py0=Math.round((GRID-1-r)*imgH/GRID), py1=Math.round((GRID-r)*imgH/GRID);
       for (let py=py0;py<py1;py++) for (let px=px0;px<px1;px++) {
         if(px<0||px>=imgW||py<0||py>=imgH) continue;
         const bi=(py*imgW+px)*4;
@@ -586,8 +562,10 @@ function compileShader(type, src) {
   const s = gl.createShader(type);
   gl.shaderSource(s, src);
   gl.compileShader(s);
-  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS))
-    console.error(gl.getShaderInfoLog(s), src);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+    console.error('SHADER ERROR:', gl.getShaderInfoLog(s));
+    console.error(src);
+  }
   return s;
 }
 function makeProgram(vsSrc, fsSrc) {
@@ -614,14 +592,13 @@ void main() {
 // So we only need ONE input texture and ONE output texture per step.
 const pdeFS = `
 precision highp float;
-uniform sampler2D u_state; // r=h_curr, g=h_prev
+uniform sampler2D u_state;
 uniform sampler2D u_mask;
 uniform vec2  u_texel;
 uniform float u_tension;
 uniform float u_damp;
 uniform float u_drive;
-uniform int   u_openEdges;
-
+uniform float u_openEdges;
 varying vec2 v_uv;
 
 void main() {
@@ -630,9 +607,20 @@ void main() {
   if (mask.r > 0.5) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
   if (mask.g > 0.5) { gl_FragColor = vec4(u_drive, 0.0, 0.0, 1.0); return; }
 
-  vec2 sc = texture2D(u_state, uv).rg;
-  float hC = sc.r; // current
-  float hP = sc.g; // previous
+  bool onL = uv.x < u_texel.x * 1.5;
+  bool onR = uv.x > 1.0 - u_texel.x * 1.5;
+  bool onB = uv.y < u_texel.y * 1.5;
+  bool onT = uv.y > 1.0 - u_texel.y * 1.5;
+  bool border = onL || onR || onB || onT;
+
+  if (border && u_openEdges < 0.5) {
+    // Reflect: hard zero wall
+    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+  }
+
+  float h   = texture2D(u_state, uv).r;
+  float vel = texture2D(u_state, uv).g;
 
   float hL = texture2D(u_state, uv - vec2(u_texel.x, 0.0)).r;
   float hR = texture2D(u_state, uv + vec2(u_texel.x, 0.0)).r;
@@ -644,36 +632,24 @@ void main() {
   if (texture2D(u_mask, uv - vec2(0.0, u_texel.y)).r > 0.5) hU = 0.0;
   if (texture2D(u_mask, uv + vec2(0.0, u_texel.y)).r > 0.5) hD = 0.0;
 
-  float lap  = hL + hR + hU + hD - 4.0 * hC;
-  // Correct wave equation: hNew = (2 - damp)*hC - (1 - damp)*hP + tension*lap
-  float hNew = (2.0 - u_damp) * hC - (1.0 - u_damp) * hP + u_tension * lap;
+  float lap    = hL + hR + hU + hD - 4.0 * h;
+  float newVel = (vel + u_tension * lap) * u_damp;
+  float newH   = h + newVel;
 
-  // Boundary conditions
-  bool edgeX0 = uv.x < u_texel.x * 1.5;
-  bool edgeX1 = uv.x > 1.0 - u_texel.x * 1.5;
-  bool edgeY0 = uv.y < u_texel.y * 1.5;
-  bool edgeY1 = uv.y > 1.0 - u_texel.y * 1.5;
-  bool edge   = edgeX0 || edgeX1 || edgeY0 || edgeY1;
-
-  if (edge) {
-    if (u_openEdges == 1) {
-      float cv  = sqrt(u_tension);
-      float ref = (cv - 1.0) / (cv + 1.0);
-      vec2 inner = uv;
-      if      (edgeX0) inner = uv + vec2( u_texel.x, 0.0);
-      else if (edgeX1) inner = uv - vec2( u_texel.x, 0.0);
-      else if (edgeY0) inner = uv + vec2(0.0,  u_texel.y);
-      else             inner = uv - vec2(0.0,  u_texel.y);
-      float hCi = texture2D(u_state, inner).r;
-      float hPi = texture2D(u_state, inner).g;
-      hNew = hPi + ref * (hCi - hP);
-    } else {
-      hNew = 0.0;
-    }
+  // Absorbing sponge layer: damp wave amplitude near edges over ~20% of grid width
+  if (u_openEdges > 0.5) {
+    float spongeW = 0.20;
+    float dx = min(uv.x, 1.0 - uv.x) / spongeW;
+    float dy = min(uv.y, 1.0 - uv.y) / spongeW;
+    float d  = min(dx, dy);
+    d = clamp(d, 0.0, 1.0);
+    // Smooth cubic ramp: at edge d=0 → factor=0.60, at interior d=1 → factor=1.0
+    float factor = mix(0.60, 1.0, d * d * (3.0 - 2.0 * d));
+    newVel *= factor;
+    newH   *= factor;
   }
 
-  // Output: r=hNew (next current), g=hC (becomes next previous)
-  gl_FragColor = vec4(hNew, hC, 0.0, 1.0);
+  gl_FragColor = vec4(newH, newVel, 0.0, 1.0);
 }
 `;
 
@@ -692,10 +668,9 @@ uniform vec2  u_lightXY;
 uniform float u_lineAngle;
 uniform float u_circleRadius;
 uniform float u_time;
-uniform float u_tilt;
-uniform float u_azimuth;
 uniform int   u_bgWaves;
 uniform int   u_waveCount;
+uniform float u_openEdges;
 uniform vec2  u_wDirs[12];
 uniform float u_wFreqs[12];
 uniform float u_wSpeeds[12];
@@ -707,26 +682,20 @@ const float PI   = 3.14159265;
 
 varying vec2 v_uv;
 
-vec3 buildCamPos() {
-  float tr = u_tilt    * PI / 180.0;
-  float ar = u_azimuth * PI / 180.0;
-  float d  = 18.0;
-  return vec3(d*sin(tr)*sin(ar), -d*sin(tr)*cos(ar), d*cos(tr));
-}
-
 void main() {
-  vec2 uv   = v_uv;
-  vec4 mask = texture2D(u_mask, uv);
+  vec2 uv    = v_uv;
+  vec2 waveUV = uv;
+  vec4 mask  = texture2D(u_mask, waveUV);
   float isObs  = step(0.5, mask.r);
   float isEmit = step(0.5, mask.g);
   vec2 world   = (uv * 2.0 - 1.0) * VIEW;
 
   // Wave heights
-  float h  = texture2D(u_wave, uv).r;
-  float hl = texture2D(u_wave, uv - vec2(u_texel.x, 0.0)).r;
-  float hr = texture2D(u_wave, uv + vec2(u_texel.x, 0.0)).r;
-  float hu = texture2D(u_wave, uv - vec2(0.0, u_texel.y)).r;
-  float hd = texture2D(u_wave, uv + vec2(0.0, u_texel.y)).r;
+  float h  = texture2D(u_wave, waveUV).r;
+  float hl = texture2D(u_wave, waveUV - vec2(u_texel.x, 0.0)).r;
+  float hr = texture2D(u_wave, waveUV + vec2(u_texel.x, 0.0)).r;
+  float hu = texture2D(u_wave, waveUV - vec2(0.0, u_texel.y)).r;
+  float hd = texture2D(u_wave, waveUV + vec2(0.0, u_texel.y)).r;
 
   // Background Gerstner waves
   if (u_bgWaves == 1) {
@@ -779,7 +748,7 @@ void main() {
     ldist = length(lv); L = lv/ldist;
   }
 
-  vec3  V     = normalize(buildCamPos() - vec3(world, h));
+  vec3  V     = normalize(vec3(0.0, 0.0, 1.0)); // top-down camera
   float NdotL = max(dot(N, L), 0.0);
   float spec  = pow(max(dot(reflect(-L,N), V), 0.0), u_shininess);
   float atten = 1.0 / (1.0 + 0.05*ldist*ldist);
@@ -791,6 +760,7 @@ void main() {
   float ca2  = caus*0.45;
 
   vec3 col = clamp(vec3(0.01,0.05,0.16) + vec3(diff) + (sp+ca2)*u_lightRGB, 0.0, 1.0);
+
   gl_FragColor = vec4(pow(col, vec3(1.0/2.2)), 1.0);
 }
 `;
@@ -799,9 +769,11 @@ void main() {
 const copyFS = `
 precision mediump float;
 uniform sampler2D u_tex;
+uniform float u_uvMargin;
 varying vec2 v_uv;
 void main() {
-  gl_FragColor = texture2D(u_tex, v_uv);
+  vec2 uv = vec2(u_uvMargin) + v_uv * (1.0 - 2.0 * u_uvMargin);
+  gl_FragColor = texture2D(u_tex, uv);
 }`;
 
 function initGLPrograms() {
@@ -825,13 +797,14 @@ let texCurr, texPrev, fbCurr, fbPrev;
 let maskData;
 let FLOAT_TYPE = null;
 
-function makeTexture(w, h, data, type, format) {
+function makeTexture(w, h, data, type, format, repeat) {
   const t = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, t);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const wrap = repeat ? gl.REPEAT : gl.CLAMP_TO_EDGE;
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
   gl.texImage2D(gl.TEXTURE_2D, 0, format || gl.RGBA, w, h, 0, format || gl.RGBA, type || gl.UNSIGNED_BYTE, data || null);
   return t;
 }
@@ -906,10 +879,26 @@ function setWaveUniforms(prog) {
 //  GPU PDE STEP
 // ═══════════════════════════════════════════════════════════════════
 const TENSION = 0.22;
-const DAMP    = 0.014; // energy loss per step
+const DAMP    = 0.993; // velocity multiplier per step — matches CPU_DAMP exactly
+
+// Zero border: 1-row strip of zeros to upload to border of state texture
+let _zeroBorderRow = null;
+let _zeroBorderCol = null;
+
+function zeroBorderInTexture(tex) {
+  if (!_zeroBorderRow || _zeroBorderRow.length !== GRID*4) {
+    _zeroBorderRow = new Float32Array(GRID * 4); // all zeros
+  }
+  const B = Math.max(2, Math.round(GRID * 0.05)); // 5% border band
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  for (let y = 0; y < B; y++) {
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, y,        GRID, 1, gl.RGBA, gl.FLOAT, _zeroBorderRow);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, GRID-1-y, GRID, 1, gl.RGBA, gl.FLOAT, _zeroBorderRow);
+  }
+  gl.bindTexture(gl.TEXTURE_2D, null);
+}
 
 function stepPDE() {
-  // Read texCurr (has r=hC, g=hP), write new state into fbPrev, then swap
   gl.bindFramebuffer(gl.FRAMEBUFFER, fbPrev);
   gl.viewport(0, 0, GRID, GRID);
   gl.useProgram(progPDE);
@@ -922,7 +911,7 @@ function stepPDE() {
   u1f(progPDE, 'u_tension', TENSION);
   u1f(progPDE, 'u_damp', DAMP);
   u1f(progPDE, 'u_drive', 3.0 * state.amplitude * Math.sin(2.5 * state.time));
-  u1i(progPDE, 'u_openEdges', state.openEdges ? 1 : 0);
+  u1f(progPDE, 'u_openEdges', state.openEdges ? 1.0 : 0.0);
 
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -930,6 +919,8 @@ function stepPDE() {
   // Swap: written result in fbPrev/texPrev becomes new curr
   [texCurr, texPrev] = [texPrev, texCurr];
   [fbCurr,  fbPrev]  = [fbPrev,  fbCurr];
+
+
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -995,18 +986,18 @@ function render() {
   u1f(progShade, 'u_lineAngle', state.lineAngle);
   u1f(progShade, 'u_circleRadius', state.circleRadius);
   u1f(progShade, 'u_time', state.time);
-  u1f(progShade, 'u_tilt', state.tilt);
-  u1f(progShade, 'u_azimuth', state.azimuth);
   u1b(progShade, 'u_bgWaves', state.bgWaves);
+  u1f(progShade, 'u_openEdges', state.openEdges ? 1.0 : 0.0);
   setWaveUniforms(progShade);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-  // Blit shaded texture to screen
+  // Blit shaded texture to screen, cropping sponge zone in absorb mode
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.viewport(0, 0, imgW, imgH);
   gl.useProgram(progCopy);
   bindQuad(progCopy);
   setTex(progCopy, 'u_tex', 0, texShade);
+  u1f(progCopy, 'u_uvMargin', state.openEdges ? 0.20 : 0.0);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
@@ -1015,7 +1006,6 @@ function render() {
 // ═══════════════════════════════════════════════════════════════════
 function drawOverlays() {
   oc.clearRect(0, 0, imgW, imgH);
-  if (state.tilt >= 5) return;
 
   function w2img(wx, wy) {
     // world Y is +up, screen Y is +down
@@ -1176,18 +1166,23 @@ let drawing       = false;
 let drawPtsWorld  = [];
 let draggingLight = false;
 
-function canvasToWorld(ex, ey) {
+// Convert canvas pixel to world coords.
+// useMargin=true: accounts for the absorb-mode UV crop so ripples/walls land correctly.
+// useMargin=false: returns raw full-grid world coords, used for the light which lives
+//                  in full [-VIEW,+VIEW] space matching the shading shader.
+function canvasToWorld(ex, ey, useMargin = true) {
   const rect = canvas.getBoundingClientRect();
   const px = ex - rect.left;
   const py = ey - rect.top;
-  const wx = (px / rect.width)  * 2 * VIEW - VIEW;
-  // Negate Y: canvas Y=0 is top, but GL textures and our world coords have Y=0 at bottom
-  const wy = -((py / rect.height) * 2 * VIEW - VIEW);
+  const margin = (useMargin && state.openEdges) ? 0.20 : 0.0;
+  const uvX = margin + (px / rect.width)  * (1.0 - 2.0 * margin);
+  const uvY = margin + (py / rect.height) * (1.0 - 2.0 * margin);
+  const wx =  (uvX * 2.0 - 1.0) * VIEW;
+  const wy = -((uvY * 2.0 - 1.0) * VIEW);
   return [wx, wy];
 }
 
 function nearLight(wx, wy) {
-  if (state.tilt > 5) return false;
   if (state.lightType === 'Point') {
     const dx = wx - state.lightXY[0], dy = wy - state.lightXY[1];
     return dx*dx + dy*dy < 0.4;
@@ -1202,27 +1197,29 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 canvas.addEventListener('mousedown', e => {
   e.preventDefault();
-  const [wx, wy] = canvasToWorld(e.clientX, e.clientY);
+  const [wx, wy] = canvasToWorld(e.clientX, e.clientY, false); // raw coords for light test
+  const [wxM, wyM] = canvasToWorld(e.clientX, e.clientY, true); // margin-aware for sim
   if (e.button === 2) {
     drawing = true;
-    drawPtsWorld = [[wx, wy]];
+    drawPtsWorld = [[wxM, wyM]];
   } else if (e.button === 0) {
     if (nearLight(wx, wy)) {
       draggingLight = true;
-    } else if (state.tilt < 1.0) {
-      if (USE_WEBGL) addRipple(wx, wy); else cpu_addRipple(wx, wy);
+    } else {
+      if (USE_WEBGL) addRipple(wxM, wyM); else cpu_addRipple(wxM, wyM);
     }
   }
 });
 
 canvas.addEventListener('mousemove', e => {
-  const [wx, wy] = canvasToWorld(e.clientX, e.clientY);
+  const [wx, wy]   = canvasToWorld(e.clientX, e.clientY, false); // raw for light drag
+  const [wxM, wyM] = canvasToWorld(e.clientX, e.clientY, true);  // margin-aware for draw
   if (drawing) {
     if (drawPtsWorld.length > 0) {
       const [lx, ly] = drawPtsWorld[drawPtsWorld.length-1];
-      if ((wx-lx)**2 + (wy-ly)**2 > 0.0025) drawPtsWorld.push([wx, wy]);
+      if ((wxM-lx)**2 + (wyM-ly)**2 > 0.0025) drawPtsWorld.push([wxM, wyM]);
     } else {
-      drawPtsWorld.push([wx, wy]);
+      drawPtsWorld.push([wxM, wyM]);
     }
   }
   if (draggingLight) {
@@ -1295,8 +1292,6 @@ function wireSlider(id, valId, getter, setter, display) {
   vl.textContent = display(getter());
 }
 
-wireSlider('sl-tilt',       'sv-tilt',       ()=>state.tilt,      v=>{state.tilt=v;},                    v=>`${v}`);
-wireSlider('sl-azimuth',    'sv-azimuth',    ()=>state.azimuth,   v=>{state.azimuth=v;},                 v=>`${v}`);
 wireSlider('sl-amplitude',  'sv-amplitude',  ()=>30,              v=>{state.amplitude=v/100;},            v=>(v/100).toFixed(2));
 wireSlider('sl-frequency',  'sv-frequency',  ()=>20,              v=>{state.frequency=v/10; buildWaveComponents();}, v=>(v/10).toFixed(1));
 wireSlider('sl-wavecount',  'sv-wavecount',  ()=>6,               v=>{state.waveCount=v; buildWaveComponents();},   v=>`${v}`);
@@ -1362,9 +1357,7 @@ document.getElementById('btn-reset').addEventListener('click', () => {
     cpu_reset();
   }
   state.lightXY = [2.0, 2.0];
-  state.tilt = 0; state.azimuth = 30; state.time = 0;
-  document.getElementById('sl-tilt').value = 0;       document.getElementById('sv-tilt').textContent = '0';
-  document.getElementById('sl-azimuth').value = 30;   document.getElementById('sv-azimuth').textContent = '30';
+  state.time = 0;
   document.getElementById('sl-amplitude').value = 30; document.getElementById('sv-amplitude').textContent = '0.30';
   document.getElementById('sl-frequency').value = 20; document.getElementById('sv-frequency').textContent = '2.0';
   document.getElementById('sl-wavecount').value = 6;  document.getElementById('sv-wavecount').textContent = '6';
