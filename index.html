@@ -335,7 +335,8 @@
 // ═══════════════════════════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════════════════════════
-const VIEW = 5.0;
+const VIEW = 7.0;
+const SPONGE = 0.15; // fraction of grid used as hidden absorb/wall border
 let GRID = 512;
 
 const state = {
@@ -666,9 +667,9 @@ void main() {
   float newVel = (vel + u_tension * lap) * u_damp;
   float newH   = h + newVel;
 
-  // Absorbing sponge layer: damp wave amplitude near edges over ~20% of grid width
+  // Absorbing sponge layer: kill waves in the outer SPONGE band (matches crop margin)
   if (u_openEdges > 0.5) {
-    float spongeW = 0.20;
+    float spongeW = 0.15;
     float dx = min(uv.x, 1.0 - uv.x) / spongeW;
     float dy = min(uv.y, 1.0 - uv.y) / spongeW;
     float d  = min(dx, dy);
@@ -1021,13 +1022,15 @@ function render() {
   setWaveUniforms(progShade);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-  // Blit shaded texture to screen, cropping sponge zone in absorb mode
+  // Blit shaded texture to screen:
+  // In absorb mode, crop out the sponge border so absorption happens right at the visible edge.
+  // In reflect mode, show the full grid (wall is stamped at the border).
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.viewport(0, 0, imgW, imgH);
   gl.useProgram(progCopy);
   bindQuad(progCopy);
   setTex(progCopy, 'u_tex', 0, texShade);
-  u1f(progCopy, 'u_uvMargin', state.openEdges ? 0.20 : 0.0);
+  u1f(progCopy, 'u_uvMargin', state.openEdges ? SPONGE : 0.0);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
@@ -1039,12 +1042,12 @@ function drawOverlays() {
 
   function w2img(wx, wy) {
     // Exact inverse of canvasToWorld: world -> grid UV -> screen pixel
-    const margin = state.openEdges ? 0.20 : 0.0;
-    const uvX =  (wx / VIEW + 1.0) * 0.5;          // world -> grid UV x
-    const uvY = -(wy / VIEW - 1.0) * 0.5;           // world -> grid UV y (flip)
-    const sx = ((uvX - margin) / (1.0 - 2.0 * margin)) * imgW;
-    const sy = ((uvY - margin) / (1.0 - 2.0 * margin)) * imgH;
-    return [sx, sy];
+    const uvX =  (wx / VIEW + 1.0) * 0.5;
+    const uvY = -(wy / VIEW - 1.0) * 0.5;
+    const margin = state.openEdges ? SPONGE : 0.0;
+    const dispX = (uvX - margin) / (1.0 - 2.0 * margin);
+    const dispY = (uvY - margin) / (1.0 - 2.0 * margin);
+    return [dispX * imgW, dispY * imgH];
   }
 
   oc.save();
@@ -1127,6 +1130,32 @@ function uploadMask() {
   gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
+// Stamp or clear a 1-pixel wall ring at the outermost edge of the visible FOV.
+// In reflect mode the full grid is shown, so the wall goes at pixel 0 / GRID-1.
+function setBorderWall(enable) {
+  for (let r = 0; r < GRID; r++) {
+    for (let c = 0; c < GRID; c++) {
+      const onEdge = r === 0 || r === GRID - 1 || c === 0 || c === GRID - 1;
+      if (onEdge) {
+        const base = (r * GRID + c) * 4;
+        if (enable) {
+          if (maskData[base+1] === 0) {
+            maskData[base]   = 255;
+            maskData[base+1] = 0;
+            maskData[base+2] = 0;
+            maskData[base+3] = 255;
+          }
+        } else {
+          if (maskData[base] === 255 && maskData[base+1] === 0) {
+            maskData[base] = maskData[base+1] = maskData[base+2] = maskData[base+3] = 0;
+          }
+        }
+      }
+    }
+  }
+  uploadMask();
+}
+
 function clearMaskRegion(startIdx, count) {
   // Zero out cells in maskData
   for (let i = 0; i < count; i++) {
@@ -1197,8 +1226,52 @@ function commitShape(worldPts) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  MOUSE / TOUCH
+//  AUDIO — water splash on ripple
 // ═══════════════════════════════════════════════════════════════════
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playSplash() {
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    const now = ctx.currentTime;
+
+    // Low-frequency thud: sine burst
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(180, now);
+    osc1.frequency.exponentialRampToValueAtTime(60, now + 0.12);
+    gain1.gain.setValueAtTime(0.45, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    osc1.connect(gain1); gain1.connect(ctx.destination);
+    osc1.start(now); osc1.stop(now + 0.18);
+
+    // High-frequency click: noise burst
+    const bufSize = ctx.sampleRate * 0.06;
+    const noiseBuffer = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufSize, 3);
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    const bandpass = ctx.createBiquadFilter();
+    bandpass.type = 'bandpass';
+    bandpass.frequency.value = 1400;
+    bandpass.Q.value = 0.8;
+    const gain2 = ctx.createGain();
+    gain2.gain.setValueAtTime(0.25, now);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+    noise.connect(bandpass); bandpass.connect(gain2); gain2.connect(ctx.destination);
+    noise.start(now); noise.stop(now + 0.06);
+  } catch(e) { /* audio not available */ }
+}
+
+
 let drawing       = false;
 let drawPtsWorld  = [];
 let draggingLight = false;
@@ -1210,10 +1283,13 @@ function canvasToWorld(ex, ey) {
   const rect = canvas.getBoundingClientRect();
   const px = ex - rect.left;
   const py = ey - rect.top;
-  // Screen pixel -> grid UV: invert the copy shader's UV crop
-  const margin = state.openEdges ? 0.20 : 0.0;
-  const uvX = margin + (px / rect.width)  * (1.0 - 2.0 * margin);
-  const uvY = margin + (py / rect.height) * (1.0 - 2.0 * margin);
+  // Screen pixel -> displayed UV
+  const dispX = px / rect.width;
+  const dispY = py / rect.height;
+  // Account for crop margin in absorb mode
+  const margin = state.openEdges ? SPONGE : 0.0;
+  const uvX = margin + dispX * (1.0 - 2.0 * margin);
+  const uvY = margin + dispY * (1.0 - 2.0 * margin);
   // Grid UV -> world
   const wx =  (uvX * 2.0 - 1.0) * VIEW;
   const wy = -((uvY * 2.0 - 1.0) * VIEW);
@@ -1244,6 +1320,7 @@ canvas.addEventListener('mousedown', e => {
       draggingLight = true;
     } else {
       if (USE_WEBGL) addRipple(wx, wy); else cpu_addRipple(wx, wy);
+      playSplash();
     }
   }
 });
@@ -1378,6 +1455,7 @@ document.getElementById('btn-edges').addEventListener('click', function() {
   state.openEdges = !state.openEdges;
   this.textContent = state.openEdges ? 'Edges: ABSORB' : 'Edges: REFLECT';
   this.classList.toggle('active', state.openEdges);
+  if (USE_WEBGL) setBorderWall(!state.openEdges);
 });
 
 document.getElementById('btn-reset').addEventListener('click', () => {
@@ -1389,6 +1467,7 @@ document.getElementById('btn-reset').addEventListener('click', () => {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     texCurr = texA; texPrev = texB; fbCurr = fbA; fbPrev = fbB;
     maskData.fill(0); uploadMask();
+    if (!state.openEdges) setBorderWall(true);
   } else {
     cpu_reset();
   }
@@ -1439,6 +1518,7 @@ window.addEventListener('load', () => {
   if (USE_WEBGL) {
     initGLPrograms();
     initGL();
+    setBorderWall(true); // default is reflect mode
     document.getElementById('status').textContent = 'webgl active';
   } else {
     cpu_initArrays();
