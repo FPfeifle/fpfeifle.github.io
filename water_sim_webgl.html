@@ -19,6 +19,7 @@
     --btn-hover: #182838;
     --wall-col:  #ff2244;
     --emit-col:  #00eeff;
+    --jet-col:   #33ffaa;
   }
 
   body {
@@ -208,7 +209,24 @@
   button.active { background: #0d2535; border-color: var(--val); color: var(--val); }
   button.wall-mode  { border-color: var(--wall-col); color: var(--wall-col); }
   button.emit-mode  { border-color: var(--emit-col); color: var(--emit-col); }
+  button.jet-mode   { border-color: var(--jet-col); color: var(--jet-col); }
   #draw-mode-btn { grid-column: 1 / -1; }
+  #btn-clearjets { grid-column: 1 / -1; }
+  #btn-agn-reset { grid-column: 1 / -1; }
+  #mode-toggle-section .btn-grid button { font-size: 10px; padding: 8px 4px; }
+
+  .readout-row {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10.5px;
+    padding: 3px 0;
+    color: var(--label);
+  }
+  .readout-row span:last-child {
+    color: var(--val);
+    font-weight: 600;
+  }
 
   #status {
     font-family: 'Share Tech Mono', monospace;
@@ -228,15 +246,25 @@
 <body>
 
 <div id="canvas-wrap">
-  <div id="canvas-title">◈ Water Reflection Simulator &nbsp;<span id="fps-display"></span></div>
+  <div id="canvas-title"><span id="canvas-title-text">◈ Water Reflection Simulator</span> &nbsp;<span id="fps-display"></span></div>
   <div id="canvas-container">
     <canvas id="sim-canvas"></canvas>
     <canvas id="overlay-canvas"></canvas>
   </div>
-  <div id="hint">L-click: ripple &nbsp;|&nbsp; R-drag: draw &nbsp;|&nbsp; Drag ●: move light &nbsp;|&nbsp; Tilt/Az: 3D camera</div>
+  <div id="hint">L-click: ripple &nbsp;|&nbsp; R-drag: draw wall/emitter &nbsp;|&nbsp; Jet mode: R-drag to aim &amp; place a hose &nbsp;|&nbsp; Drag ●: move light &nbsp;|&nbsp; Tilt/Az: 3D camera</div>
 </div>
 
 <div id="panel">
+
+  <div class="panel-section" id="mode-toggle-section">
+    <div class="section-title">Mode</div>
+    <div class="btn-grid">
+      <button id="btn-mode-water" class="active">Water Sim</button>
+      <button id="btn-mode-agn">AGN Jet</button>
+    </div>
+  </div>
+
+  <div id="panel-water">
 
   <div class="panel-section">
     <div class="section-title">Camera</div>
@@ -268,6 +296,40 @@
       <span class="slider-label">Wave Count</span>
       <input type="range" id="sl-wavecount" min="1" max="12" value="6" step="1">
       <span class="slider-val" id="sv-wavecount">6</span>
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <div class="section-title">Medium / Jet</div>
+    <div class="slider-row">
+      <span class="slider-label">Ambient ρ</span>
+      <input type="range" id="sl-ambientdensity" min="20" max="400" value="100" step="5">
+      <span class="slider-val" id="sv-ambientdensity">1.00</span>
+    </div>
+    <div class="slider-row">
+      <span class="slider-label">Jet ρ</span>
+      <input type="range" id="sl-jetdensity" min="20" max="400" value="35" step="5">
+      <span class="slider-val" id="sv-jetdensity">0.35</span>
+    </div>
+    <div class="slider-row">
+      <span class="slider-label">Jet Speed</span>
+      <input type="range" id="sl-jetspeed" min="10" max="150" value="60" step="5">
+      <span class="slider-val" id="sv-jetspeed">6.0</span>
+    </div>
+    <div class="slider-row">
+      <span class="slider-label">Jet Force</span>
+      <input type="range" id="sl-jetforce" min="0" max="100" value="60" step="5">
+      <span class="slider-val" id="sv-jetforce">60</span>
+    </div>
+    <div class="slider-row">
+      <span class="slider-label">Jet Reach</span>
+      <input type="range" id="sl-jetreach" min="10" max="90" value="50" step="5">
+      <span class="slider-val" id="sv-jetreach">5.0</span>
+    </div>
+    <div class="slider-row">
+      <span class="slider-label">Jet Spread</span>
+      <input type="range" id="sl-jetspread" min="2" max="45" value="12" step="1">
+      <span class="slider-val" id="sv-jetspread">12°</span>
     </div>
   </div>
 
@@ -324,9 +386,82 @@
       <button id="btn-pause">Pause</button>
       <button id="btn-edges">Edges: REFLECT</button>
       <button id="btn-reset">Reset</button>
+      <button id="btn-clearjets">Clear Jets</button>
       <button id="draw-mode-btn" class="wall-mode">Draw: WALL</button>
     </div>
   </div>
+
+  </div><!-- /panel-water -->
+
+  <div id="panel-agn" style="display:none">
+
+    <div class="panel-section">
+      <div class="section-title">Viewing Geometry</div>
+      <div class="slider-row">
+        <span class="slider-label">Viewing θ</span>
+        <input type="range" id="sl-agn-theta" min="1" max="900" value="50" step="1">
+        <span class="slider-val" id="sv-agn-theta">5.0°</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Spine (fast core)</div>
+      <div class="slider-row">
+        <span class="slider-label">Γ spine</span>
+        <input type="range" id="sl-agn-gspine" min="15" max="500" value="150" step="5">
+        <span class="slider-val" id="sv-agn-gspine">15.0</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Sheath (slower layer)</div>
+      <div class="slider-row">
+        <span class="slider-label">Γ sheath</span>
+        <input type="range" id="sl-agn-gsheath" min="11" max="150" value="30" step="1">
+        <span class="slider-val" id="sv-agn-gsheath">3.0</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Ambient Medium</div>
+      <div class="slider-row">
+        <span class="slider-label">ISM density</span>
+        <input type="range" id="sl-agn-ambient" min="10" max="400" value="100" step="5">
+        <span class="slider-val" id="sv-agn-ambient">1.00</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Spectral α</span>
+        <input type="range" id="sl-agn-alpha" min="-50" max="200" value="100" step="5">
+        <span class="slider-val" id="sv-agn-alpha">1.00</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Live Readout — Spine</div>
+      <div class="readout-row"><span>β</span><span id="ro-spine-beta">–</span></div>
+      <div class="readout-row"><span>δ (Doppler)</span><span id="ro-spine-delta">–</span></div>
+      <div class="readout-row"><span>β_app (observed)</span><span id="ro-spine-bapp">–</span></div>
+      <div class="readout-row"><span>beaming cone 1/Γ</span><span id="ro-spine-cone">–</span></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Live Readout — Sheath</div>
+      <div class="readout-row"><span>β</span><span id="ro-sheath-beta">–</span></div>
+      <div class="readout-row"><span>δ (Doppler)</span><span id="ro-sheath-delta">–</span></div>
+      <div class="readout-row"><span>β_app (observed)</span><span id="ro-sheath-bapp">–</span></div>
+      <div class="readout-row"><span>beaming cone 1/Γ</span><span id="ro-sheath-cone">–</span></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Controls</div>
+      <div class="btn-grid">
+        <button id="btn-agn-pause">Pause</button>
+        <button id="btn-agn-sweep">Sweep θ: OFF</button>
+        <button id="btn-agn-reset">Reset View</button>
+      </div>
+    </div>
+
+  </div><!-- /panel-agn -->
 
   <div id="status">initializing webgl…</div>
 </div>
@@ -357,7 +492,66 @@ const state = {
   lightXY:      [2.0, 2.0],
   circleRadius: 3.0,
   lineAngle:    0.0,
+  ambientDensity: 1.00,
+  jetDensity:     0.35,
+  jetSpeed:       6.0,
+  jetForce:       60,
+  jetReach:       5.0,
+  jetSpreadDeg:   12,
+  jets:           [],   // {x, y, dx, dy} — active hose objects (world coords, unit direction)
+  mode:           'water', // 'water' | 'agn'
 };
+const MAX_JETS = 4;
+const JET_NOZZLE_R = 0.14; // world units, fixed nozzle radius
+const GRAVITY = 9.0;       // for cosmetic particle arcs
+
+// ═══════════════════════════════════════════════════════════════════
+//  AGN SPINE-SHEATH JET MODEL (side-view diagram, separate mode)
+// ═══════════════════════════════════════════════════════════════════
+const agn = {
+  thetaDeg:      5.0,   // angle between line of sight and jet axis
+  gammaSpine:    15.0,  // bulk Lorentz factor of the fast inner spine
+  gammaSheath:   3.0,   // bulk Lorentz factor of the slower surrounding sheath
+  ambientDensity: 1.0,  // relative ISM/IGM density the jet is propagating into
+  alpha:         1.0,   // spectral index, used in the Doppler flux exponent (3+alpha)
+  sweep:         false, // auto-sweep the viewing angle for a live blazar<->radio-galaxy demo
+  time:          0,
+};
+
+// Special relativity: bulk speed (as a fraction of c) from the Lorentz factor
+function betaFromGamma(g) { return Math.sqrt(Math.max(0, 1 - 1/(g*g))); }
+// Relativistic Doppler factor: delta = 1 / [Gamma (1 - beta*cos(theta))]
+function dopplerFactor(g, beta, thetaRad) { return 1 / (g * (1 - beta*Math.cos(thetaRad))); }
+// Apparent (often superluminal) transverse speed, in units of c
+function apparentBeta(beta, thetaRad) { return (beta*Math.sin(thetaRad)) / (1 - beta*Math.cos(thetaRad)); }
+// Approximate relativistic beaming half-angle, 1/Gamma, in degrees
+function beamingConeDeg(g) { return (1/g) * (180/Math.PI); }
+
+function agnComputeAll() {
+  const thetaRad = agn.thetaDeg * Math.PI/180;
+  const bS = betaFromGamma(agn.gammaSpine),  bH = betaFromGamma(agn.gammaSheath);
+  const dS = dopplerFactor(agn.gammaSpine, bS, thetaRad), dH = dopplerFactor(agn.gammaSheath, bH, thetaRad);
+  const baS = apparentBeta(bS, thetaRad), baH = apparentBeta(bH, thetaRad);
+  const fluxExp = 3 + agn.alpha;
+  return {
+    thetaRad,
+    spine:  { beta: bS, delta: dS, betaApp: baS, cone: beamingConeDeg(agn.gammaSpine),  flux: Math.pow(Math.max(0,dS), fluxExp) },
+    sheath: { beta: bH, delta: dH, betaApp: baH, cone: beamingConeDeg(agn.gammaSheath), flux: Math.pow(Math.max(0,dH), fluxExp) },
+  };
+}
+
+function updateAGNReadouts() {
+  const c = agnComputeAll();
+  document.getElementById('ro-spine-beta').textContent   = c.spine.beta.toFixed(4) + 'c';
+  document.getElementById('ro-spine-delta').textContent  = c.spine.delta.toFixed(2);
+  document.getElementById('ro-spine-bapp').textContent   = c.spine.betaApp.toFixed(2) + 'c';
+  document.getElementById('ro-spine-cone').textContent   = c.spine.cone.toFixed(2) + '°';
+  document.getElementById('ro-sheath-beta').textContent  = c.sheath.beta.toFixed(4) + 'c';
+  document.getElementById('ro-sheath-delta').textContent = c.sheath.delta.toFixed(2);
+  document.getElementById('ro-sheath-bapp').textContent  = c.sheath.betaApp.toFixed(2) + 'c';
+  document.getElementById('ro-sheath-cone').textContent  = c.sheath.cone.toFixed(2) + '°';
+  return c;
+}
 
 // Wave components
 let wDirs, wFreqs, wSpeeds, wAmps, wPhases;
@@ -435,6 +629,38 @@ function cpu_initArrays() {
   cpu_emitMask= new Uint8Array(N);
 }
 
+// ── Directional jet ("hose") influence — shared logic for CPU path ──
+// A jet is a nozzle at (x,y) firing along unit vector (dx,dy). It carves out
+// a narrow, slowly-widening plume; within it we blend the local medium
+// density toward the jet's own density and drive a traveling wave whose
+// phase is locked to distance/speed, so the disturbance visibly races away
+// from the nozzle at the chosen velocity instead of just radiating outward.
+function jetInfluence(wx, wy, time) {
+  if (!state.jets.length) return { effect: 0, drive: 0 };
+  const speed  = Math.max(0.05, state.jetSpeed);
+  const reach  = Math.max(0.05, state.jetReach);
+  const spreadTan = Math.tan(state.jetSpreadDeg * Math.PI/180 * 0.5);
+  const forceAmp  = (state.jetForce/100) * 1.5;
+  let weight = 0, accum = 0, best = 0;
+  for (let k = 0; k < state.jets.length; k++) {
+    const jet = state.jets[k];
+    const relx = wx - jet.x, rely = wy - jet.y;
+    const along = relx*jet.dx + rely*jet.dy;
+    const perp  = -relx*jet.dy + rely*jet.dx;
+    const halfWidth = JET_NOZZLE_R + Math.max(0, along) * spreadTan;
+    if (along > -JET_NOZZLE_R && along < reach && Math.abs(perp) < halfWidth) {
+      const edgeFade  = 1 - Math.min(1, Math.abs(perp)/Math.max(halfWidth, 1e-4));
+      const reachFade = 1 - Math.min(1, Math.max(0, along)/reach);
+      const nozzleFade = Math.min(1, Math.max(0, (along+JET_NOZZLE_R)/JET_NOZZLE_R));
+      const w = edgeFade*edgeFade*reachFade*nozzleFade;
+      const phase = along/speed - time;
+      const d = forceAmp * Math.sin(phase*3.0) * w;
+      accum += d*w; weight += w; best = Math.max(best, w);
+    }
+  }
+  return { effect: Math.min(1, best), drive: weight > 1e-4 ? accum/weight : 0 };
+}
+
 function cpu_initCanvas() {
   if (!cpu_ctx) cpu_ctx = canvas.getContext('2d');
   if (imgW > 0 && imgH > 0) {
@@ -444,16 +670,29 @@ function cpu_initCanvas() {
 }
 
 const CPU_TENSION = 0.22, CPU_DAMP = 0.993;
+const CPU_TENSION_MIN = 0.02, CPU_TENSION_MAX = 0.24;
 
 function cpu_stepPDE() {
   cpu_hPrev.set(cpu_h0);
+  const hasJets = state.jets.length > 0;
   for (let r = 1; r < GRID-1; r++) {
     for (let c = 1; c < GRID-1; c++) {
       const i = r*GRID+c;
       if (cpu_obsMask[i]) { cpu_h1[i]=0; cpu_vel[i]=0; continue; }
+      let rho = state.ambientDensity, jetEff = 0, jetDrive = 0;
+      if (hasJets) {
+        const wx = -VIEW + (c/(GRID-1))*2*VIEW;
+        const wy = -VIEW + (r/(GRID-1))*2*VIEW;
+        const ji = jetInfluence(wx, wy, state.time);
+        jetEff = ji.effect; jetDrive = ji.drive;
+        rho = state.ambientDensity + (state.jetDensity - state.ambientDensity) * jetEff;
+      }
+      const tension = Math.max(CPU_TENSION_MIN, Math.min(CPU_TENSION_MAX, CPU_TENSION / Math.max(0.05, rho)));
       const lap = cpu_h0[(r-1)*GRID+c]+cpu_h0[(r+1)*GRID+c]+cpu_h0[r*GRID+(c-1)]+cpu_h0[r*GRID+(c+1)]-4*cpu_h0[i];
-      cpu_vel[i] = (cpu_vel[i] + CPU_TENSION*lap)*CPU_DAMP;
-      cpu_h1[i]  = cpu_h0[i] + cpu_vel[i];
+      cpu_vel[i] = (cpu_vel[i] + tension*lap)*CPU_DAMP;
+      let hNew = cpu_h0[i] + cpu_vel[i];
+      if (jetEff > 0) hNew = hNew*(1-0.4*jetEff) + jetDrive*(0.4*jetEff);
+      cpu_h1[i] = hNew;
     }
   }
   if (!state.openEdges) {
@@ -527,6 +766,14 @@ function cpu_render() {
         rr=encode(0.01+diff+(sp+ca2)*lr);
         gg=encode(0.05+diff+(sp+ca2)*lg);
         bb=encode(0.16+diff+(sp+ca2)*lb);
+        if (state.jets.length) {
+          const jetT = jetInfluence(wx, wy, state.time).effect * 0.18;
+          if (jetT > 0) {
+            rr = Math.round(rr*(1-jetT) + 13*jetT);
+            gg = Math.round(gg*(1-jetT) + 89*jetT);
+            bb = Math.round(bb*(1-jetT) + 140*jetT);
+          }
+        }
       }
       // Write pixel block (scale grid to canvas)
       const px0=Math.round(c*scaleX), px1=Math.round((c+1)*scaleX);
@@ -575,6 +822,7 @@ function cpu_rasterisePolyline(worldPts,thickness) {
 function cpu_reset() {
   cpu_h0.fill(0);cpu_h1.fill(0);cpu_vel.fill(0);cpu_hPrev.fill(0);
   cpu_obsMask.fill(0);cpu_emitMask.fill(0);
+  state.jets.length = 0;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -612,6 +860,51 @@ void main() {
 // ── PDE step shader ─────────────────────────────────────────────────
 // Uses a single ping-pong pair: each texture stores r=h_current, g=h_previous
 // So we only need ONE input texture and ONE output texture per step.
+// ── Shared GLSL: directional jet ("hose") influence, used by both the ──
+// PDE step and the shading pass so their notion of "where the jet is" and
+// "how strong it drives the surface" always agree.
+const JET_GLSL = `
+#define MAX_JETS 4
+uniform int   u_numJets;
+uniform vec2  u_jetPos[MAX_JETS];
+uniform vec2  u_jetDir[MAX_JETS];
+uniform float u_jetSpeed;
+uniform float u_jetReach;
+uniform float u_jetNozzleR;
+uniform float u_jetSpreadTan;
+uniform float u_jetForce;
+uniform float u_time;
+
+void jetInfluence(vec2 world, out float jetEffect, out float jetDrive) {
+  float weight = 0.0;
+  float accum  = 0.0;
+  float best   = 0.0;
+  for (int i = 0; i < MAX_JETS; i++) {
+    if (i >= u_numJets) break;
+    vec2 rel = world - u_jetPos[i];
+    float along = dot(rel, u_jetDir[i]);
+    vec2 perpDir = vec2(-u_jetDir[i].y, u_jetDir[i].x);
+    float perp = dot(rel, perpDir);
+    float halfWidth = u_jetNozzleR + max(0.0, along) * u_jetSpreadTan;
+    if (along > -u_jetNozzleR && along < u_jetReach && abs(perp) < halfWidth) {
+      float edgeFade   = 1.0 - clamp(abs(perp) / max(halfWidth, 0.0001), 0.0, 1.0);
+      float reachFade  = 1.0 - clamp(along / u_jetReach, 0.0, 1.0);
+      float nozzleFade = clamp((along + u_jetNozzleR) / u_jetNozzleR, 0.0, 1.0);
+      float w = edgeFade * edgeFade * reachFade * nozzleFade;
+      // Traveling wave: phase depends on distance/speed, so the disturbance
+      // visibly races away from the nozzle at the chosen jet speed.
+      float phase = along / max(u_jetSpeed, 0.05) - u_time;
+      float d = u_jetForce * sin(phase * 3.0) * w;
+      accum  += d * w;
+      weight += w;
+      best = max(best, w);
+    }
+  }
+  jetDrive  = weight > 0.0001 ? accum / weight : 0.0;
+  jetEffect = clamp(best, 0.0, 1.0);
+}
+`;
+
 const pdeFS = `
 precision highp float;
 uniform sampler2D u_state; // r=h_curr, g=h_prev
@@ -621,7 +914,12 @@ uniform float u_tension;
 uniform float u_damp;
 uniform float u_drive;
 uniform int   u_openEdges;
-
+uniform float u_ambientDensity;
+uniform float u_jetDensity;
+uniform float u_tensionMin;
+uniform float u_tensionMax;
+` + JET_GLSL + `
+const float VIEW = 5.0;
 varying vec2 v_uv;
 
 void main() {
@@ -629,6 +927,14 @@ void main() {
   vec4 mask = texture2D(u_mask, uv);
   if (mask.r > 0.5) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
   if (mask.g > 0.5) { gl_FragColor = vec4(u_drive, 0.0, 0.0, 1.0); return; }
+
+  vec2 world = (uv * 2.0 - 1.0) * VIEW;
+  float jetEffect, jetDrive;
+  jetInfluence(world, jetEffect, jetDrive);
+
+  // Local medium density (jet vs ambient) sets local wave speed / tension
+  float rho = mix(u_ambientDensity, u_jetDensity, jetEffect);
+  float localTension = clamp(u_tension / max(0.05, rho), u_tensionMin, u_tensionMax);
 
   vec2 sc = texture2D(u_state, uv).rg;
   float hC = sc.r; // current
@@ -646,7 +952,10 @@ void main() {
 
   float lap  = hL + hR + hU + hD - 4.0 * hC;
   // Correct wave equation: hNew = (2 - damp)*hC - (1 - damp)*hP + tension*lap
-  float hNew = (2.0 - u_damp) * hC - (1.0 - u_damp) * hP + u_tension * lap;
+  float hNew = (2.0 - u_damp) * hC - (1.0 - u_damp) * hP + localTension * lap;
+
+  // Soft-drive the jet plume toward its traveling-wave value
+  hNew = mix(hNew, jetDrive, 0.4 * jetEffect);
 
   // Boundary conditions
   bool edgeX0 = uv.x < u_texel.x * 1.5;
@@ -677,6 +986,7 @@ void main() {
 }
 `;
 
+
 // ── Shading / render shader ─────────────────────────────────────────
 const shadingFSFixed = `
 precision highp float;
@@ -691,7 +1001,6 @@ uniform int   u_lightType;
 uniform vec2  u_lightXY;
 uniform float u_lineAngle;
 uniform float u_circleRadius;
-uniform float u_time;
 uniform float u_tilt;
 uniform float u_azimuth;
 uniform int   u_bgWaves;
@@ -701,7 +1010,7 @@ uniform float u_wFreqs[12];
 uniform float u_wSpeeds[12];
 uniform float u_wAmps[12];
 uniform float u_wPhases[12];
-
+` + JET_GLSL + `
 const float VIEW = 5.0;
 const float PI   = 3.14159265;
 
@@ -791,6 +1100,9 @@ void main() {
   float ca2  = caus*0.45;
 
   vec3 col = clamp(vec3(0.01,0.05,0.16) + vec3(diff) + (sp+ca2)*u_lightRGB, 0.0, 1.0);
+  float jetEffect, jetDrive;
+  jetInfluence(world, jetEffect, jetDrive);
+  col = mix(col, vec3(0.05, 0.35, 0.55), jetEffect * 0.18);
   gl_FragColor = vec4(pow(col, vec3(1.0/2.2)), 1.0);
 }
 `;
@@ -903,10 +1215,31 @@ function setWaveUniforms(prog) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  JET (HOSE) UNIFORMS — shared by PDE step and shading pass
+// ═══════════════════════════════════════════════════════════════════
+function setJetUniforms(prog) {
+  const n = Math.min(MAX_JETS, state.jets.length);
+  u1i(prog, 'u_numJets', n);
+  for (let i = 0; i < n; i++) {
+    const j = state.jets[i];
+    gl.uniform2f(gl.getUniformLocation(prog, `u_jetPos[${i}]`), j.x, j.y);
+    gl.uniform2f(gl.getUniformLocation(prog, `u_jetDir[${i}]`), j.dx, j.dy);
+  }
+  const spreadTan = Math.tan(state.jetSpreadDeg * Math.PI/180 * 0.5);
+  u1f(prog, 'u_jetSpeed', Math.max(0.05, state.jetSpeed));
+  u1f(prog, 'u_jetReach', Math.max(0.05, state.jetReach));
+  u1f(prog, 'u_jetNozzleR', JET_NOZZLE_R);
+  u1f(prog, 'u_jetSpreadTan', spreadTan);
+  u1f(prog, 'u_jetForce', (state.jetForce/100) * 1.5);
+  u1f(prog, 'u_time', state.time);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  GPU PDE STEP
 // ═══════════════════════════════════════════════════════════════════
 const TENSION = 0.22;
 const DAMP    = 0.014; // energy loss per step
+const TENSION_MIN = 0.02, TENSION_MAX = 0.24;
 
 function stepPDE() {
   // Read texCurr (has r=hC, g=hP), write new state into fbPrev, then swap
@@ -923,6 +1256,11 @@ function stepPDE() {
   u1f(progPDE, 'u_damp', DAMP);
   u1f(progPDE, 'u_drive', 3.0 * state.amplitude * Math.sin(2.5 * state.time));
   u1i(progPDE, 'u_openEdges', state.openEdges ? 1 : 0);
+  u1f(progPDE, 'u_ambientDensity', state.ambientDensity);
+  u1f(progPDE, 'u_jetDensity', state.jetDensity);
+  u1f(progPDE, 'u_tensionMin', TENSION_MIN);
+  u1f(progPDE, 'u_tensionMax', TENSION_MAX);
+  setJetUniforms(progPDE);
 
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -999,6 +1337,7 @@ function render() {
   u1f(progShade, 'u_azimuth', state.azimuth);
   u1b(progShade, 'u_bgWaves', state.bgWaves);
   setWaveUniforms(progShade);
+  setJetUniforms(progShade);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
   // Blit shaded texture to screen
@@ -1011,16 +1350,78 @@ function render() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  JET PARTICLES — purely cosmetic spray droplets above the water,
+//  inspired by classic GPU/canvas particle-flow demos (glowing dots on
+//  ballistic arcs). They do not feed back into the simulation; the actual
+//  physical push comes from the analytic jetInfluence() traveling wave.
+// ═══════════════════════════════════════════════════════════════════
+let jetParticles = [];
+
+function w2img(wx, wy) {
+  // world Y is +up, screen Y is +down
+  return [(wx + VIEW) / (2*VIEW) * imgW, (1 - (wy + VIEW) / (2*VIEW)) * imgH];
+}
+
+function spawnJetParticles(dt) {
+  for (const jet of state.jets) {
+    const rate = 14 + state.jetSpeed * 2.2;
+    jet.spawnAccum = (jet.spawnAccum || 0) + rate * dt;
+    const spreadRad = state.jetSpreadDeg * Math.PI / 180;
+    while (jet.spawnAccum >= 1) {
+      jet.spawnAccum -= 1;
+      const ang = Math.atan2(jet.dy, jet.dx) + (Math.random()-0.5) * spreadRad * 0.7;
+      const spd = state.jetSpeed * (0.75 + Math.random()*0.4);
+      jetParticles.push({
+        x: jet.x, y: jet.y,
+        vx: Math.cos(ang)*spd, vy: Math.sin(ang)*spd,
+        z: 0, vz: spd*0.45 + Math.random()*0.3,
+        age: 0,
+      });
+    }
+  }
+  if (jetParticles.length > 900) jetParticles.splice(0, jetParticles.length - 900);
+}
+
+function updateJetParticles(dt) {
+  if (!state.jets.length && !jetParticles.length) return;
+  if (state.jets.length) spawnJetParticles(dt);
+  const next = [];
+  for (const p of jetParticles) {
+    p.x += p.vx*dt; p.y += p.vy*dt;
+    p.z += p.vz*dt; p.vz -= GRAVITY*dt;
+    p.age += dt;
+    if (p.z >= 0 && p.age < 3.0 && Math.abs(p.x) < VIEW*1.3 && Math.abs(p.y) < VIEW*1.3) {
+      next.push(p);
+    }
+  }
+  jetParticles = next;
+}
+
+function drawJetParticles(oc) {
+  oc.save();
+  for (const p of jetParticles) {
+    const [sx, sy] = w2img(p.x, p.y);
+    const lift = p.z / (2*VIEW) * Math.min(imgW, imgH); // droplets rise visually with z
+    const px = sx, py = sy - lift;
+    const r = 1.4 + p.z*1.2;
+    const alpha = Math.max(0, 1 - p.age/3.0);
+    oc.beginPath();
+    oc.arc(px, py, r, 0, Math.PI*2);
+    oc.fillStyle = `rgba(190,235,255,${(0.55*alpha).toFixed(3)})`;
+    oc.shadowColor = 'rgba(120,220,255,0.9)';
+    oc.shadowBlur = 4;
+    oc.fill();
+  }
+  oc.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  OVERLAY (drawn on 2D canvas on top)
 // ═══════════════════════════════════════════════════════════════════
 function drawOverlays() {
   oc.clearRect(0, 0, imgW, imgH);
+  drawJetParticles(oc);
   if (state.tilt >= 5) return;
-
-  function w2img(wx, wy) {
-    // world Y is +up, screen Y is +down
-    return [(wx + VIEW) / (2*VIEW) * imgW, (1 - (wy + VIEW) / (2*VIEW)) * imgH];
-  }
 
   oc.save();
   if (state.lightType === 'Point') {
@@ -1054,6 +1455,29 @@ function drawOverlays() {
     }
     oc.stroke();
   }
+
+  // Persistent nozzle + aim markers for placed hoses
+  for (const jet of state.jets) {
+    const [nx, ny] = w2img(jet.x, jet.y);
+    const [tx, ty] = w2img(jet.x + jet.dx*0.9, jet.y + jet.dy*0.9);
+    oc.beginPath(); oc.moveTo(nx, ny); oc.lineTo(tx, ty);
+    oc.strokeStyle = 'rgba(51,255,170,0.85)'; oc.lineWidth = 2.5; oc.lineCap = 'round';
+    oc.stroke();
+    oc.beginPath(); oc.arc(nx, ny, 5, 0, Math.PI*2);
+    oc.fillStyle = '#33ffaa'; oc.fill();
+  }
+
+  // Live aim preview while placing a new hose
+  if (jetAiming) {
+    const [sx0, sy0] = w2img(...jetAimStart);
+    const [sx1, sy1] = w2img(...jetAimCurrent);
+    oc.beginPath(); oc.moveTo(sx0, sy0); oc.lineTo(sx1, sy1);
+    oc.strokeStyle = '#33ffaa'; oc.lineWidth = 2.5; oc.lineCap = 'round';
+    oc.stroke();
+    oc.beginPath(); oc.arc(sx0, sy0, 5, 0, Math.PI*2);
+    oc.fillStyle = '#33ffaa'; oc.fill();
+  }
+
   oc.restore();
 }
 
@@ -1170,11 +1594,183 @@ function commitShape(worldPts) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  MOUSE / TOUCH
+//  AGN SPINE-SHEATH JET — side-view diagram (drawn on the overlay canvas)
 // ═══════════════════════════════════════════════════════════════════
+function drawAGN() {
+  const ctx = oc;
+  ctx.save();
+  ctx.clearRect(0, 0, imgW, imgH);
+
+  // Background: deep space
+  const bg = ctx.createLinearGradient(0, 0, 0, imgH);
+  bg.addColorStop(0, '#04060c');
+  bg.addColorStop(1, '#070a12');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, imgW, imgH);
+
+  const c = agnComputeAll();
+  const engineX = imgW * 0.14, engineY = imgH * 0.5;
+  const jetLen  = imgW * 0.90;
+  const axisEndX = engineX + jetLen;
+
+  // Ambient medium (ISM/IGM): scattered faint dots, density set by slider
+  const nDots = Math.round(40 * agn.ambientDensity);
+  ctx.save();
+  let seed = 1234;
+  function rnd() { seed = (seed*1103515245 + 12345) & 0x7fffffff; return (seed % 10000)/10000; }
+  for (let i = 0; i < nDots; i++) {
+    const x = rnd()*imgW, y = rnd()*imgH;
+    const r = 0.6 + rnd()*1.2;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(140,160,190,${(0.10+0.12*rnd()).toFixed(3)})`;
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Opening half-angles: illustrative Gamma*theta ~ const relation (wider Gamma -> narrower jet)
+  const spineHalfDeg  = Math.min(22, Math.max(1.5, 55 / agn.gammaSpine));
+  const sheathHalfDeg = Math.min(38, Math.max(spineHalfDeg + 3, 55 / agn.gammaSheath));
+
+  function tubeHalfWidth(x, halfDeg, shearAmp, shearFreq, shearSpeed, t) {
+    const frac = Math.max(0, (x - engineX) / jetLen);
+    const coneW = 6 + frac * jetLen * Math.tan(halfDeg * Math.PI/180);
+    const wave  = shearAmp * frac * Math.sin(x*shearFreq - t*shearSpeed);
+    return coneW + wave;
+  }
+
+  function drawTube(halfDeg, shearAmp, shearFreq, shearSpeed, colorStops, t) {
+    ctx.beginPath();
+    const steps = 60;
+    for (let i = 0; i <= steps; i++) {
+      const x = engineX + (jetLen * i/steps);
+      const hw = tubeHalfWidth(x, halfDeg, shearAmp, shearFreq, shearSpeed, t);
+      const y = engineY - hw;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    for (let i = steps; i >= 0; i--) {
+      const x = engineX + (jetLen * i/steps);
+      const hw = tubeHalfWidth(x, halfDeg, shearAmp, shearFreq, shearSpeed, t);
+      const y = engineY + hw;
+      ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(engineX, 0, axisEndX, 0);
+    for (const [pos, col] of colorStops) grad.addColorStop(pos, col);
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
+  const t = agn.time;
+  // Brightness (saturating remap of Doppler-boosted flux) drives opacity/color punch
+  const brightS = c.spine.flux  / (c.spine.flux  + 4);
+  const brightH = c.sheath.flux / (c.sheath.flux + 4);
+
+  // Sheath (drawn first, wider, underneath the spine)
+  drawTube(sheathHalfDeg, 3.5, 0.05, 2.0, [
+    [0,   `rgba(255,140,60,${(0.15+0.55*brightH).toFixed(3)})`],
+    [0.5, `rgba(255,100,40,${(0.10+0.40*brightH).toFixed(3)})`],
+    [1,   `rgba(200,60,30,${(0.05+0.20*brightH).toFixed(3)})`],
+  ], t);
+
+  // Spine (narrower, nested inside, hotter color)
+  drawTube(spineHalfDeg, 1.6, 0.09, 3.2, [
+    [0,   `rgba(210,240,255,${(0.25+0.65*brightS).toFixed(3)})`],
+    [0.5, `rgba(140,210,255,${(0.15+0.55*brightS).toFixed(3)})`],
+    [1,   `rgba(90,160,255,${(0.08+0.30*brightS).toFixed(3)})`],
+  ], t);
+
+  // Traveling brightness knots along each tube (purely illustrative flow indicator;
+  // pixel speed uses the real bulk beta, so spine knots do outrun sheath knots)
+  function drawKnots(halfDeg, beta, brightness, color, shearAmp, shearFreq, shearSpeed, spacing, sizeBase) {
+    const speedPx = 60 + beta * 260;
+    const count = Math.floor(jetLen / spacing);
+    for (let i = 0; i < count; i++) {
+      const x = engineX + ((t*speedPx + i*spacing) % jetLen);
+      const hw = tubeHalfWidth(x, halfDeg, shearAmp, shearFreq, shearSpeed, t);
+      const knotSize = sizeBase * (0.6 + 0.4*brightness);
+      const grad = ctx.createRadialGradient(x, engineY, 0, x, engineY, knotSize);
+      grad.addColorStop(0, `rgba(${color},${(0.55*brightness).toFixed(3)})`);
+      grad.addColorStop(1, `rgba(${color},0)`);
+      ctx.beginPath();
+      ctx.arc(x, engineY, knotSize, 0, Math.PI*2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      void hw;
+    }
+  }
+  drawKnots(sheathHalfDeg, c.sheath.beta, brightH, '255,150,80',  3.5, 0.05, 2.0, 34, 14);
+  drawKnots(spineHalfDeg,  c.spine.beta,  brightS, '200,235,255', 1.6, 0.09, 3.2, 22, 9);
+
+  // Central engine: accretion disk + black hole, with a faint (deboosted) counter-jet stub
+  ctx.save();
+  ctx.translate(engineX, engineY);
+  const diskGrad = ctx.createRadialGradient(0,0,3, 0,0,26);
+  diskGrad.addColorStop(0, 'rgba(255,220,180,0.9)');
+  diskGrad.addColorStop(0.5, 'rgba(255,150,60,0.5)');
+  diskGrad.addColorStop(1, 'rgba(255,150,60,0)');
+  ctx.beginPath(); ctx.ellipse(0, 0, 26, 8, 0, 0, Math.PI*2);
+  ctx.fillStyle = diskGrad; ctx.fill();
+  // counter-jet (receding, heavily deboosted -> short and dim)
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-34, 0);
+  ctx.strokeStyle = 'rgba(140,120,140,0.25)'; ctx.lineWidth = 4; ctx.lineCap='round'; ctx.stroke();
+  // event horizon
+  ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI*2);
+  ctx.fillStyle = '#000'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.restore();
+
+  // Labels along the jet
+  ctx.font = '11px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(200,235,255,0.85)';
+  ctx.fillText(`spine  Γ=${agn.gammaSpine.toFixed(1)}  δ=${c.spine.delta.toFixed(2)}  β_app=${c.spine.betaApp.toFixed(2)}c`,
+    engineX + 20, engineY - sheathHalfDeg - 30);
+  ctx.fillStyle = 'rgba(255,180,130,0.85)';
+  ctx.fillText(`sheath Γ=${agn.gammaSheath.toFixed(1)}  δ=${c.sheath.delta.toFixed(2)}  β_app=${c.sheath.betaApp.toFixed(2)}c`,
+    engineX + 20, engineY - sheathHalfDeg - 14);
+
+  // Viewing-angle inset (top-left): jet axis vs line of sight
+  const ix = 70, iy = 66, ir = 46;
+  ctx.save();
+  ctx.translate(ix, iy);
+  ctx.strokeStyle = 'rgba(150,180,210,0.35)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(0, 0, ir, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(ir, 0);
+  ctx.strokeStyle = 'rgba(140,210,255,0.9)'; ctx.lineWidth = 2; ctx.stroke();
+  const thR = agn.thetaDeg*Math.PI/180;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(ir*Math.cos(thR), -ir*Math.sin(thR));
+  ctx.strokeStyle = 'rgba(255,220,120,0.9)'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, 16, 0, -thR, true); ctx.strokeStyle='rgba(255,220,120,0.7)'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.fillStyle = 'rgba(200,220,240,0.8)';
+  ctx.font = '9px "Share Tech Mono", monospace';
+  ctx.fillText('jet axis', ir+4, 3);
+  ctx.fillText('line of sight', ir*Math.cos(thR)+4, -ir*Math.sin(thR));
+  ctx.fillText(`θ=${agn.thetaDeg.toFixed(1)}°`, 4, 22);
+  ctx.restore();
+
+  ctx.restore();
+}
+
+function updateAGN(dt) {
+  agn.time += dt;
+  if (agn.sweep) {
+    // Sweep 1deg..60deg and back, ~14s period, to show blazar<->radio-galaxy transition live
+    const period = 14.0;
+    const s = (Math.sin((agn.time / period) * Math.PI*2 - Math.PI/2) + 1) / 2;
+    agn.thetaDeg = 1 + s * 59;
+    const sl = document.getElementById('sl-agn-theta');
+    sl.value = Math.round(agn.thetaDeg*10);
+    document.getElementById('sv-agn-theta').textContent = agn.thetaDeg.toFixed(1) + '°';
+  }
+  updateAGNReadouts();
+}
+
+
 let drawing       = false;
 let drawPtsWorld  = [];
 let draggingLight = false;
+let jetAiming     = false;
+let jetAimStart   = [0, 0];
+let jetAimCurrent = [0, 0];
 
 function canvasToWorld(ex, ey) {
   const rect = canvas.getBoundingClientRect();
@@ -1198,14 +1794,28 @@ function nearLight(wx, wy) {
   }
 }
 
+function addJet(x0, y0, x1, y1) {
+  const dx = x1 - x0, dy = y1 - y0;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  if (len < 0.08) return; // too short a drag to have a clear aim
+  state.jets.push({ x: x0, y: y0, dx: dx/len, dy: dy/len, spawnAccum: 0 });
+  if (state.jets.length > MAX_JETS) state.jets.shift();
+}
+
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 canvas.addEventListener('mousedown', e => {
   e.preventDefault();
   const [wx, wy] = canvasToWorld(e.clientX, e.clientY);
   if (e.button === 2) {
-    drawing = true;
-    drawPtsWorld = [[wx, wy]];
+    if (state.drawMode === 'jet') {
+      jetAiming = true;
+      jetAimStart = [wx, wy];
+      jetAimCurrent = [wx, wy];
+    } else {
+      drawing = true;
+      drawPtsWorld = [[wx, wy]];
+    }
   } else if (e.button === 0) {
     if (nearLight(wx, wy)) {
       draggingLight = true;
@@ -1217,6 +1827,9 @@ canvas.addEventListener('mousedown', e => {
 
 canvas.addEventListener('mousemove', e => {
   const [wx, wy] = canvasToWorld(e.clientX, e.clientY);
+  if (jetAiming) {
+    jetAimCurrent = [wx, wy];
+  }
   if (drawing) {
     if (drawPtsWorld.length > 0) {
       const [lx, ly] = drawPtsWorld[drawPtsWorld.length-1];
@@ -1233,7 +1846,10 @@ canvas.addEventListener('mousemove', e => {
 });
 
 canvas.addEventListener('mouseup', e => {
-  if (e.button === 2 && drawing) {
+  if (e.button === 2 && jetAiming) {
+    jetAiming = false;
+    addJet(jetAimStart[0], jetAimStart[1], jetAimCurrent[0], jetAimCurrent[1]);
+  } else if (e.button === 2 && drawing) {
     drawing = false;
     if (drawPtsWorld.length >= 2) commitShape(drawPtsWorld);
     drawPtsWorld = [];
@@ -1243,6 +1859,10 @@ canvas.addEventListener('mouseup', e => {
 });
 
 canvas.addEventListener('mouseleave', () => {
+  if (jetAiming) {
+    jetAiming = false;
+    addJet(jetAimStart[0], jetAimStart[1], jetAimCurrent[0], jetAimCurrent[1]);
+  }
   if (drawing) {
     if (drawPtsWorld.length >= 2) commitShape(drawPtsWorld);
     drawPtsWorld = [];
@@ -1258,23 +1878,29 @@ let lastFpsTime = performance.now();
 let frameCount = 0;
 
 function loop() {
-  if (!state.paused) {
-    state.time += 0.04 * state.timeScale;
-    const steps = Math.max(1, Math.min(Math.round(state.timeScale), 20));
-    for (let s = 0; s < steps; s++) {
-      if (USE_WEBGL) stepPDE(); else cpu_stepPDE();
+  if (state.mode === 'agn') {
+    if (!state.paused) updateAGN(0.04 * state.timeScale);
+    drawAGN();
+  } else {
+    if (!state.paused) {
+      state.time += 0.04 * state.timeScale;
+      const steps = Math.max(1, Math.min(Math.round(state.timeScale), 20));
+      for (let s = 0; s < steps; s++) {
+        if (USE_WEBGL) stepPDE(); else cpu_stepPDE();
+      }
+      updateJetParticles(0.04 * state.timeScale);
     }
+    if (USE_WEBGL) { render(); drawOverlays(); }
+    else           { cpu_render(); drawOverlays(); }
   }
-
-  if (USE_WEBGL) { render(); drawOverlays(); }
-  else           { cpu_render(); drawOverlays(); }
 
   frameCount++;
   const now = performance.now();
   if (now - lastFpsTime > 500) {
     const fps = (frameCount / ((now - lastFpsTime) / 1000)).toFixed(0);
-    document.getElementById('fps-display').textContent =
-      `${fps} fps · ${GRID}² · ${USE_WEBGL ? 'GPU' : 'CPU'}`;
+    document.getElementById('fps-display').textContent = state.mode === 'agn'
+      ? `${fps} fps · spine-sheath model`
+      : `${fps} fps · ${GRID}² · ${USE_WEBGL ? 'GPU' : 'CPU'}`;
     frameCount = 0;
     lastFpsTime = now;
   }
@@ -1303,6 +1929,18 @@ wireSlider('sl-wavecount',  'sv-wavecount',  ()=>6,               v=>{state.wave
 wireSlider('sl-shininess',  'sv-shininess',  ()=>30,              v=>{state.shininess=v;},                v=>`${v}`);
 wireSlider('sl-lightheight','sv-lightheight',()=>50,              v=>{state.lightHeight=v/10;},           v=>(v/10).toFixed(1));
 wireSlider('sl-colortemp',  'sv-colortemp',  ()=>6500,            v=>{state.colorTemp=v;},                v=>`${Math.round(v)}`);
+wireSlider('sl-ambientdensity','sv-ambientdensity',()=>100,       v=>{state.ambientDensity=v/100;},       v=>(v/100).toFixed(2));
+wireSlider('sl-jetdensity', 'sv-jetdensity', ()=>35,              v=>{state.jetDensity=v/100;},           v=>(v/100).toFixed(2));
+wireSlider('sl-jetspeed',   'sv-jetspeed',   ()=>60,              v=>{state.jetSpeed=v/10;},              v=>(v/10).toFixed(1));
+wireSlider('sl-jetforce',   'sv-jetforce',   ()=>60,              v=>{state.jetForce=v;},                 v=>`${v}`);
+wireSlider('sl-jetreach',   'sv-jetreach',   ()=>50,              v=>{state.jetReach=v/10;},              v=>(v/10).toFixed(1));
+wireSlider('sl-jetspread',  'sv-jetspread',  ()=>12,              v=>{state.jetSpreadDeg=v;},             v=>`${v}°`);
+
+wireSlider('sl-agn-theta',   'sv-agn-theta',   ()=>50,  v=>{agn.thetaDeg=v/10; updateAGNReadouts();},        v=>(v/10).toFixed(1)+'°');
+wireSlider('sl-agn-gspine',  'sv-agn-gspine',  ()=>150, v=>{agn.gammaSpine=v/10; updateAGNReadouts();},      v=>(v/10).toFixed(1));
+wireSlider('sl-agn-gsheath', 'sv-agn-gsheath', ()=>30,  v=>{agn.gammaSheath=v/10; updateAGNReadouts();},     v=>(v/10).toFixed(1));
+wireSlider('sl-agn-ambient', 'sv-agn-ambient', ()=>100, v=>{agn.ambientDensity=v/100;},                      v=>(v/100).toFixed(2));
+wireSlider('sl-agn-alpha',   'sv-agn-alpha',   ()=>100, v=>{agn.alpha=v/100; updateAGNReadouts();},          v=>(v/100).toFixed(2));
 
 (function() {
   const sl = document.getElementById('sl-resolution');
@@ -1331,6 +1969,31 @@ function wireRadioGroup(name, onchange) {
 wireRadioGroup('light', val => { state.lightType = val; });
 wireRadioGroup('speed', val => { state.timeScale = parseFloat(val); });
 
+document.getElementById('btn-mode-water').addEventListener('click', function() {
+  if (state.mode === 'water') return;
+  state.mode = 'water';
+  this.classList.add('active');
+  document.getElementById('btn-mode-agn').classList.remove('active');
+  document.getElementById('panel-water').style.display = '';
+  document.getElementById('panel-agn').style.display = 'none';
+  document.getElementById('canvas-title-text').textContent = '◈ Water Reflection Simulator';
+  document.getElementById('hint').textContent =
+    'L-click: ripple | R-drag: draw wall/emitter | Jet mode: R-drag to aim & place a hose | Drag ●: move light | Tilt/Az: 3D camera';
+});
+
+document.getElementById('btn-mode-agn').addEventListener('click', function() {
+  if (state.mode === 'agn') return;
+  state.mode = 'agn';
+  this.classList.add('active');
+  document.getElementById('btn-mode-water').classList.remove('active');
+  document.getElementById('panel-water').style.display = 'none';
+  document.getElementById('panel-agn').style.display = '';
+  document.getElementById('canvas-title-text').textContent = '◈ AGN Jet — Spine / Sheath Model';
+  document.getElementById('hint').textContent =
+    'Side-on view: fast inner spine + slower surrounding sheath, launched from the central engine into the ambient medium | Viewing θ sets the Doppler boost';
+  updateAGNReadouts();
+});
+
 document.getElementById('btn-waves').addEventListener('click', function() {
   state.bgWaves = !state.bgWaves;
   this.textContent = state.bgWaves ? 'Waves: ON' : 'Waves: OFF';
@@ -1341,6 +2004,43 @@ document.getElementById('btn-pause').addEventListener('click', function() {
   state.paused = !state.paused;
   this.textContent = state.paused ? 'Resume' : 'Pause';
   this.classList.toggle('active', state.paused);
+  const agnBtn = document.getElementById('btn-agn-pause');
+  agnBtn.textContent = state.paused ? 'Resume' : 'Pause';
+  agnBtn.classList.toggle('active', state.paused);
+});
+
+document.getElementById('btn-agn-pause').addEventListener('click', function() {
+  state.paused = !state.paused;
+  this.textContent = state.paused ? 'Resume' : 'Pause';
+  this.classList.toggle('active', state.paused);
+  const waterBtn = document.getElementById('btn-pause');
+  waterBtn.textContent = state.paused ? 'Resume' : 'Pause';
+  waterBtn.classList.toggle('active', state.paused);
+});
+
+document.getElementById('btn-agn-sweep').addEventListener('click', function() {
+  agn.sweep = !agn.sweep;
+  this.textContent = agn.sweep ? 'Sweep θ: ON' : 'Sweep θ: OFF';
+  this.classList.toggle('active', agn.sweep);
+});
+
+document.getElementById('btn-agn-reset').addEventListener('click', () => {
+  agn.thetaDeg = 5.0; agn.gammaSpine = 15.0; agn.gammaSheath = 3.0;
+  agn.ambientDensity = 1.0; agn.alpha = 1.0; agn.sweep = false; agn.time = 0;
+  document.getElementById('sl-agn-theta').value = 50;
+  document.getElementById('sv-agn-theta').textContent = '5.0°';
+  document.getElementById('sl-agn-gspine').value = 150;
+  document.getElementById('sv-agn-gspine').textContent = '15.0';
+  document.getElementById('sl-agn-gsheath').value = 30;
+  document.getElementById('sv-agn-gsheath').textContent = '3.0';
+  document.getElementById('sl-agn-ambient').value = 100;
+  document.getElementById('sv-agn-ambient').textContent = '1.00';
+  document.getElementById('sl-agn-alpha').value = 100;
+  document.getElementById('sv-agn-alpha').textContent = '1.00';
+  const sweepBtn = document.getElementById('btn-agn-sweep');
+  sweepBtn.textContent = 'Sweep θ: OFF';
+  sweepBtn.classList.remove('active');
+  updateAGNReadouts();
 });
 
 document.getElementById('btn-edges').addEventListener('click', function() {
@@ -1361,6 +2061,7 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   } else {
     cpu_reset();
   }
+  state.jets.length = 0; jetParticles = [];
   state.lightXY = [2.0, 2.0];
   state.tilt = 0; state.azimuth = 30; state.time = 0;
   document.getElementById('sl-tilt').value = 0;       document.getElementById('sv-tilt').textContent = '0';
@@ -1371,15 +2072,31 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   document.getElementById('sl-shininess').value = 30; document.getElementById('sv-shininess').textContent = '30';
   document.getElementById('sl-lightheight').value=50; document.getElementById('sv-lightheight').textContent='5.0';
   document.getElementById('sl-colortemp').value=6500; document.getElementById('sv-colortemp').textContent='6500';
+  document.getElementById('sl-ambientdensity').value=100; document.getElementById('sv-ambientdensity').textContent='1.00';
+  document.getElementById('sl-jetdensity').value=35;      document.getElementById('sv-jetdensity').textContent='0.35';
+  document.getElementById('sl-jetspeed').value=60;        document.getElementById('sv-jetspeed').textContent='6.0';
+  document.getElementById('sl-jetforce').value=60;        document.getElementById('sv-jetforce').textContent='60';
+  document.getElementById('sl-jetreach').value=50;        document.getElementById('sv-jetreach').textContent='5.0';
+  document.getElementById('sl-jetspread').value=12;       document.getElementById('sv-jetspread').textContent='12°';
   state.amplitude=0.30; state.frequency=2.0; state.waveCount=6;
   state.shininess=30; state.lightHeight=5.0; state.colorTemp=6500;
+  state.ambientDensity=1.00; state.jetDensity=0.35;
+  state.jetSpeed=6.0; state.jetForce=60; state.jetReach=5.0; state.jetSpreadDeg=12;
   buildWaveComponents();
 });
 
 document.getElementById('draw-mode-btn').addEventListener('click', function() {
-  state.drawMode = state.drawMode === 'wall' ? 'emitter' : 'wall';
-  this.textContent = state.drawMode === 'wall' ? 'Draw: WALL' : 'Draw: EMITTER';
-  this.className   = state.drawMode === 'wall' ? 'wall-mode' : 'emit-mode';
+  const order = ['wall', 'emitter', 'jet'];
+  state.drawMode = order[(order.indexOf(state.drawMode) + 1) % order.length];
+  const labels = { wall: 'Draw: WALL', emitter: 'Draw: EMITTER', jet: 'Draw: JET' };
+  const classes = { wall: 'wall-mode', emitter: 'emit-mode', jet: 'jet-mode' };
+  this.textContent = labels[state.drawMode];
+  this.className   = classes[state.drawMode];
+});
+
+document.getElementById('btn-clearjets').addEventListener('click', () => {
+  state.jets.length = 0;
+  jetParticles = [];
 });
 
 // ═══════════════════════════════════════════════════════════════════
