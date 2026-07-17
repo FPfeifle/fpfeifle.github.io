@@ -214,6 +214,16 @@
   #btn-clearjets { grid-column: 1 / -1; }
   #btn-agn-reset { grid-column: 1 / -1; }
   #mode-toggle-section .btn-grid button { font-size: 10px; padding: 8px 4px; }
+  #mode-select {
+    width: 100%;
+    background: #0a1622;
+    color: var(--val);
+    border: 1px solid #1c3348;
+    border-radius: 4px;
+    padding: 7px 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11.5px;
+  }
 
   .readout-row {
     display: flex;
@@ -257,11 +267,16 @@
 <div id="panel">
 
   <div class="panel-section" id="mode-toggle-section">
-    <div class="section-title">Mode</div>
-    <div class="btn-grid">
-      <button id="btn-mode-water" class="active">Water Sim</button>
-      <button id="btn-mode-agn">AGN Jet</button>
-    </div>
+    <div class="section-title">Phenomenon</div>
+    <select id="mode-select">
+      <option value="water">Water Sim (sandbox)</option>
+      <option value="agn">AGN Jet — Spine / Sheath</option>
+      <option value="hr">Stellar Evolution — HR Diagram</option>
+      <option value="rotation">Galaxy Rotation Curve</option>
+      <option value="sed">Blazar Spectral Energy Distribution</option>
+      <option value="pulsar">Pulsar P–Ṗ Diagram</option>
+      <option value="iact">IACT Gamma-Ray Air Shower</option>
+    </select>
   </div>
 
   <div id="panel-water">
@@ -396,6 +411,23 @@
   <div id="panel-agn" style="display:none">
 
     <div class="panel-section">
+      <div class="section-title">View</div>
+      <div class="btn-grid">
+        <button id="btn-agn-view-profile" class="active">Profile</button>
+        <button id="btn-agn-view-sky">Down the Jet</button>
+        <button id="btn-agn-view-particles">Particles → γ/ν</button>
+      </div>
+    </div>
+
+    <div class="panel-section" id="agn-particle-section" style="display:none">
+      <div class="section-title">Particle Interaction</div>
+      <div class="btn-grid">
+        <button id="btn-agn-process" style="grid-column:1/-1">Process: Synchrotron</button>
+      </div>
+      <div id="agn-process-caption" style="font-size:9.5px; color:var(--label); line-height:1.4; margin-top:6px;"></div>
+    </div>
+
+    <div class="panel-section">
       <div class="section-title">Viewing Geometry</div>
       <div class="slider-row">
         <span class="slider-label">Viewing θ</span>
@@ -429,10 +461,8 @@
         <input type="range" id="sl-agn-ambient" min="10" max="400" value="100" step="5">
         <span class="slider-val" id="sv-agn-ambient">1.00</span>
       </div>
-      <div class="slider-row">
-        <span class="slider-label">Spectral α</span>
-        <input type="range" id="sl-agn-alpha" min="-50" max="200" value="100" step="5">
-        <span class="slider-val" id="sv-agn-alpha">1.00</span>
+      <div style="font-size:9.5px; color:var(--label); line-height:1.4; margin-top:2px;">
+        denser ISM confines the outflow (narrower jet) and quenches the visible jet sooner
       </div>
     </div>
 
@@ -462,6 +492,278 @@
     </div>
 
   </div><!-- /panel-agn -->
+
+  <div id="panel-hr" style="display:none">
+    <div class="panel-section">
+      <div class="section-title">Star</div>
+      <div class="slider-row">
+        <span class="slider-label">Mass (M☉)</span>
+        <input type="range" id="sl-hr-mass" min="-100" max="160" value="0" step="5">
+        <span class="slider-val" id="sv-hr-mass">1.00</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Age</span>
+        <input type="range" id="sl-hr-age" min="0" max="160" value="0" step="1">
+        <span class="slider-val" id="sv-hr-age">0.00</span>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title">Live Readout</div>
+      <div class="readout-row"><span>Stage</span><span id="ro-hr-stage">–</span></div>
+      <div class="readout-row"><span>Teff</span><span id="ro-hr-teff">–</span></div>
+      <div class="readout-row"><span>Luminosity</span><span id="ro-hr-lum">–</span></div>
+      <div class="readout-row"><span>Radius (approx)</span><span id="ro-hr-radius">–</span></div>
+      <div class="readout-row"><span>MS lifetime</span><span id="ro-hr-lifetime">–</span></div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title">Controls</div>
+      <div class="btn-grid">
+        <button id="btn-hr-play">Play Evolution</button>
+        <button id="btn-hr-reset">Reset</button>
+      </div>
+    </div>
+  </div><!-- /panel-hr -->
+
+  <div id="panel-rotation" style="display:none">
+    <div class="panel-section">
+      <div class="section-title">Visible (Baryonic) Disk</div>
+      <div class="slider-row">
+        <span class="slider-label">Disk mass</span>
+        <input type="range" id="sl-rot-diskmass" min="10" max="200" value="60" step="5">
+        <span class="slider-val" id="sv-rot-diskmass">6.0×10¹⁰ M☉</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Disk scale length</span>
+        <input type="range" id="sl-rot-scale" min="10" max="80" value="30" step="2">
+        <span class="slider-val" id="sv-rot-scale">3.0 kpc</span>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title">Dark Matter Halo</div>
+      <div class="slider-row">
+        <span class="slider-label">Halo v∞</span>
+        <input type="range" id="sl-rot-vinf" min="0" max="300" value="180" step="10">
+        <span class="slider-val" id="sv-rot-vinf">180 km/s</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Halo core radius</span>
+        <input type="range" id="sl-rot-core" min="5" max="150" value="30" step="5">
+        <span class="slider-val" id="sv-rot-core">3.0 kpc</span>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title">View</div>
+      <div class="slider-row">
+        <span class="slider-label">Tilt</span>
+        <input type="range" id="sl-rot-tilt" min="0" max="85" value="55" step="1">
+        <span class="slider-val" id="sv-rot-tilt">55°</span>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title">Controls</div>
+      <div class="btn-grid">
+        <button id="btn-rot-halo" class="active">Halo: ON</button>
+        <button id="btn-rot-reset">Reset</button>
+      </div>
+    </div>
+  </div><!-- /panel-rotation -->
+
+  <div id="panel-sed" style="display:none">
+    <div class="panel-section">
+      <div class="section-title">Emitting Electrons</div>
+      <div class="slider-row">
+        <span class="slider-label">γ_peak</span>
+        <input type="range" id="sl-sed-gamma" min="200" max="600" value="400" step="5">
+        <span class="slider-val" id="sv-sed-gamma">1.0×10⁴</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Electron index p</span>
+        <input type="range" id="sl-sed-p" min="15" max="45" value="25" step="1">
+        <span class="slider-val" id="sv-sed-p">2.5</span>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title">Jet Conditions</div>
+      <div class="slider-row">
+        <span class="slider-label">B field</span>
+        <input type="range" id="sl-sed-bfield" min="-200" max="100" value="-100" step="5">
+        <span class="slider-val" id="sv-sed-bfield">0.10 G</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Doppler δ</span>
+        <input type="range" id="sl-sed-delta" min="2" max="60" value="15" step="1">
+        <span class="slider-val" id="sv-sed-delta">15</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Compton dominance</span>
+        <input type="range" id="sl-sed-compton" min="-100" max="100" value="0" step="5">
+        <span class="slider-val" id="sv-sed-compton">1.00</span>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title">Live Readout</div>
+      <div class="readout-row"><span>Blazar class</span><span id="ro-sed-class">–</span></div>
+      <div class="readout-row"><span>Sync. peak ν</span><span id="ro-sed-syncnu">–</span></div>
+      <div class="readout-row"><span>Sync. peak E</span><span id="ro-sed-synce">–</span></div>
+      <div class="readout-row"><span>IC peak ν</span><span id="ro-sed-icnu">–</span></div>
+      <div class="readout-row"><span>IC peak E</span><span id="ro-sed-ice">–</span></div>
+      <div class="readout-row"><span>TeV-detectable?</span><span id="ro-sed-tev">–</span></div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title">Controls</div>
+      <div class="btn-grid">
+        <button id="btn-sed-flare" style="grid-column:1/-1">Play Flare</button>
+        <button id="btn-sed-reset">Reset</button>
+      </div>
+    </div>
+  </div><!-- /panel-sed -->
+
+  <div id="panel-pulsar" style="display:none">
+    <div class="panel-section">
+      <div class="section-title">Birth Conditions</div>
+      <div class="slider-row">
+        <span class="slider-label">Initial period P₀</span>
+        <input type="range" id="sl-psr-p0" min="0" max="350" value="130" step="5">
+        <span class="slider-val" id="sv-psr-p0">20 ms</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Surface B field</span>
+        <input type="range" id="sl-psr-b" min="800" max="1550" value="1200" step="5">
+        <span class="slider-val" id="sv-psr-b">1.0×10¹² G</span>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title">Age</div>
+      <div class="slider-row">
+        <span class="slider-label">Age (yr)</span>
+        <input type="range" id="sl-psr-age" min="0" max="800" value="0" step="5">
+        <span class="slider-val" id="sv-psr-age">1</span>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title">Live Readout</div>
+      <div class="readout-row"><span>Category</span><span id="ro-psr-cat">–</span></div>
+      <div class="readout-row"><span>Current P</span><span id="ro-psr-p">–</span></div>
+      <div class="readout-row"><span>Current Ṗ</span><span id="ro-psr-pdot">–</span></div>
+      <div class="readout-row"><span>Char. age τ_c</span><span id="ro-psr-tauc">–</span></div>
+      <div class="readout-row"><span>Spin-down Ė</span><span id="ro-psr-edot">–</span></div>
+    </div>
+    <div class="panel-section">
+      <div class="section-title">Controls</div>
+      <div class="btn-grid">
+        <button id="btn-psr-play">Play Evolution</button>
+        <button id="btn-psr-reset">Reset</button>
+      </div>
+    </div>
+  </div><!-- /panel-pulsar -->
+
+  <div id="panel-iact" style="display:none">
+    <div class="panel-section">
+      <div class="section-title">View</div>
+      <div class="btn-grid">
+        <button id="btn-iact-view-single" class="active">Single Event</button>
+        <button id="btn-iact-view-wobble">Wobble Stats</button>
+        <button id="btn-iact-view-stereo" style="grid-column:1/-1">Stereo (2 Telescopes)</button>
+      </div>
+    </div>
+    <div class="panel-section" id="iact-single-controls">
+      <div class="section-title">Primary Particle</div>
+      <div class="slider-row">
+        <span class="slider-label">Energy</span>
+        <input type="range" id="sl-iact-energy" min="150" max="400" value="250" step="5">
+        <span class="slider-val" id="sv-iact-energy">300 GeV</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Attack angle</span>
+        <input type="range" id="sl-iact-attack" min="0" max="50" value="0" step="1">
+        <span class="slider-val" id="sv-iact-attack">0°</span>
+      </div>
+      <div class="btn-grid">
+        <button id="btn-iact-ptype" style="grid-column:1/-1">Type: Gamma ray</button>
+      </div>
+    </div>
+    <div class="panel-section" id="iact-single-controls2">
+      <div class="section-title">Telescope</div>
+      <div class="slider-row">
+        <span class="slider-label">Impact distance</span>
+        <input type="range" id="sl-iact-impact" min="0" max="200" value="60" step="5">
+        <span class="slider-val" id="sv-iact-impact">60 m</span>
+      </div>
+      <div class="btn-grid">
+        <button id="btn-iact-wobble" style="grid-column:1/-1">Wobble: OFF</button>
+      </div>
+    </div>
+    <div class="panel-section" id="iact-single-controls3">
+      <div class="section-title">Shower Readout</div>
+      <div class="readout-row"><span>Shower max altitude</span><span id="ro-iact-hmax">–</span></div>
+      <div class="readout-row"><span>Particles at max</span><span id="ro-iact-nmax">–</span></div>
+      <div class="readout-row"><span>Cherenkov pool radius</span><span id="ro-iact-pool">–</span></div>
+      <div class="readout-row"><span>Telescope in pool?</span><span id="ro-iact-intrigger">–</span></div>
+    </div>
+    <div class="panel-section" id="iact-hillas-section" style="display:none">
+      <div class="section-title">Camera Image (Hillas params)</div>
+      <div class="readout-row"><span id="lbl-iact-length">Length</span><span id="ro-iact-length">–</span></div>
+      <div class="readout-row"><span id="lbl-iact-width">Width</span><span id="ro-iact-width">–</span></div>
+      <div class="readout-row"><span>Distance</span><span id="ro-iact-distance">–</span></div>
+      <div class="readout-row"><span id="lbl-iact-alpha">Alpha</span><span id="ro-iact-alpha">–</span></div>
+      <div class="readout-row"><span>Classification</span><span id="ro-iact-classify">–</span></div>
+    </div>
+    <div class="panel-section" id="iact-single-controls4">
+      <div class="section-title">Controls</div>
+      <div class="btn-grid">
+        <button id="btn-iact-fire" style="grid-column:1/-1">Fire Shower</button>
+        <button id="btn-iact-fire5" style="grid-column:1/-1">Fire 5 (mixed, random landing)</button>
+        <button id="btn-iact-reset">Reset</button>
+      </div>
+    </div>
+
+    <div class="panel-section" id="iact-wobble-controls" style="display:none">
+      <div class="section-title">Population</div>
+      <div class="slider-row">
+        <span class="slider-label">Wobble offset</span>
+        <input type="range" id="sl-iact-woboffset" min="20" max="80" value="40" step="5">
+        <span class="slider-val" id="sv-iact-woboffset">0.40°</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Signal fraction</span>
+        <input type="range" id="sl-iact-signalfrac" min="0" max="30" value="12" step="1">
+        <span class="slider-val" id="sv-iact-signalfrac">12%</span>
+      </div>
+    </div>
+    <div class="panel-section" id="iact-wobble-readout" style="display:none">
+      <div class="section-title">Alpha-Plot Readout</div>
+      <div class="readout-row"><span>Events simulated</span><span id="ro-wob-events">0</span></div>
+      <div class="readout-row"><span>ON (α&lt;20°)</span><span id="ro-wob-on">0</span></div>
+      <div class="readout-row"><span>OFF (α&lt;20°, norm.)</span><span id="ro-wob-off">0</span></div>
+      <div class="readout-row"><span>Excess</span><span id="ro-wob-excess">0</span></div>
+      <div class="readout-row"><span>Excess/√OFF (illustrative)</span><span id="ro-wob-sig">–</span></div>
+    </div>
+    <div class="panel-section" id="iact-wobble-controls2" style="display:none">
+      <div class="section-title">Controls</div>
+      <div class="btn-grid">
+        <button id="btn-wob-run200">Run 200</button>
+        <button id="btn-wob-run2000">Run 2000</button>
+        <button id="btn-wob-reset" style="grid-column:1/-1">Reset Statistics</button>
+      </div>
+    </div>
+
+    <div class="panel-section" id="iact-stereo-controls" style="display:none">
+      <div class="section-title">Telescope 2</div>
+      <div style="font-size:9.5px; color:var(--label); line-height:1.4; margin-bottom:6px;">
+        Fire a shower in Single Event view first — Stereo shows that same shower as seen by a second telescope at a different ground position.
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Tel. 2 impact</span>
+        <input type="range" id="sl-iact-impact2" min="0" max="200" value="90" step="5">
+        <span class="slider-val" id="sv-iact-impact2">90 m</span>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">Tel. 2 position angle</span>
+        <input type="range" id="sl-iact-tel2angle" min="20" max="160" value="90" step="5">
+        <span class="slider-val" id="sv-iact-tel2angle">90°</span>
+      </div>
+    </div>
+  </div><!-- /panel-iact -->
 
   <div id="status">initializing webgl…</div>
 </div>
@@ -515,6 +817,8 @@ const agn = {
   ambientDensity: 1.0,  // relative ISM/IGM density the jet is propagating into
   alpha:         1.0,   // spectral index, used in the Doppler flux exponent (3+alpha)
   sweep:         false, // auto-sweep the viewing angle for a live blazar<->radio-galaxy demo
+  view:          'profile', // 'profile' | 'sky' | 'particles'
+  process:       'synchrotron', // which particle-interaction channel to diagram
   time:          0,
 };
 
@@ -553,7 +857,502 @@ function updateAGNReadouts() {
   return c;
 }
 
-// Wave components
+// ═══════════════════════════════════════════════════════════════════
+//  STELLAR EVOLUTION — HR DIAGRAM (illustrative power-law approximations,
+//  not full stellar-structure models, but the right qualitative tracks)
+// ═══════════════════════════════════════════════════════════════════
+const hr = { mass: 1.0, age: 0.0, playing: false, trail: [] };
+
+// ═══════════════════════════════════════════════════════════════════
+//  GALAXY ROTATION CURVE — exponential disk + pseudo-isothermal halo
+// ═══════════════════════════════════════════════════════════════════
+const rot = { diskMass: 6.0, diskScale: 3.0, vInf: 180, coreRadius: 3.0, haloOn: true, time: 0, tilt: 55, diskParticles: [], haloParticles: [] };
+const ROT_RMAX_DISPLAY = 30; // kpc, matches the curve plot's x-axis range
+const ROT_TIME_K = 0.05;     // artistic time-compression so orbits are watchable
+
+function rotRegenParticles() {
+  rot.diskParticles = [];
+  for (let i = 0; i < 900; i++) {
+    let r = -rot.diskScale * Math.log(Math.random() + 1e-6);
+    r = Math.min(r, ROT_RMAX_DISPLAY * 0.98);
+    // thin disk: small vertical scatter (sum-of-uniforms for a mild Gaussian-ish falloff)
+    const z = (Math.random()+Math.random()+Math.random()-1.5) * 0.35;
+    rot.diskParticles.push({ r, theta0: Math.random()*Math.PI*2, z, size: 0.5+Math.random()*1.1 });
+  }
+  rot.haloParticles = [];
+  for (let i = 0; i < 550; i++) {
+    // isotropic 3D sampling (uniform in volume) -> a genuinely spherical cloud, not a flattened disk
+    const r3 = ROT_RMAX_DISPLAY * 1.15 * Math.cbrt(Math.random());
+    const theta = Math.random()*Math.PI*2;
+    const phi = Math.acos(2*Math.random()-1);
+    rot.haloParticles.push({
+      r: r3*Math.sin(phi), angle0: theta, z0: r3*Math.cos(phi),
+      jitterAmp: 0.3 + Math.random()*0.7,
+      freq1: 0.15+Math.random()*0.25, freq2: 0.15+Math.random()*0.25, freq3: 0.15+Math.random()*0.25,
+      phase1: Math.random()*Math.PI*2, phase2: Math.random()*Math.PI*2, phase3: Math.random()*Math.PI*2,
+      size: 0.8+Math.random()*1.5,
+    });
+  }
+}
+
+function rotTotalVel(r) {
+  const vv = rotVisibleVel(r, rot.diskMass*1e10, rot.diskScale);
+  const vh = rot.haloOn ? rotHaloVel(r, rot.vInf, rot.coreRadius) : 0;
+  return Math.sqrt(vv*vv + vh*vh);
+}
+
+function updateRotation(dt) {
+  if (rot.diskParticles.length === 0) rotRegenParticles();
+  rot.time += dt;
+}
+
+// diskMass in units of 10^10 Msun, diskScale/coreRadius in kpc, vInf in km/s
+
+const G_KPC = 4.30091e-6; // G in kpc (km/s)^2 / Msun
+
+function rotVisibleVel(r, diskMassMsun, Rd) {
+  if (r <= 0) return 0;
+  const x = r / Rd;
+  const Menc = diskMassMsun * (1 - (1+x)*Math.exp(-x)); // thin exponential disk enclosed mass approx
+  return Math.sqrt(Math.max(0, G_KPC * Menc / r));
+}
+
+function rotHaloVel(r, vInf, rc) {
+  if (r <= 0) return 0;
+  // pseudo-isothermal sphere: v^2 = vInf^2 * (1 - (rc/r) atan(r/rc))
+  const v2 = vInf*vInf * (1 - (rc/r)*Math.atan(r/rc));
+  return Math.sqrt(Math.max(0, v2));
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  BLAZAR SPECTRAL ENERGY DISTRIBUTION — one-zone leptonic SSC model
+//  (order-of-magnitude / textbook scaling relations, not a radiative-
+//  transfer code, but the right qualitative and roughly quantitative shape)
+// ═══════════════════════════════════════════════════════════════════
+const sed = { gammaPeak: 1e4, p: 2.5, bField: 0.1, delta: 15, comptonDominance: 1.0,
+               flarePlaying: false, flareT: 0, flareDuration: 6.0, lightcurve: [], time: 0 };
+const H_EV_S = 4.1357e-15; // Planck constant in eV*s
+
+function sedFlarePulse() {
+  // smooth 0->1->0 bump while a flare is playing, 0 otherwise
+  if (!sed.flarePlaying) return 0;
+  return Math.sin(Math.PI * Math.min(1, sed.flareT/sed.flareDuration));
+}
+function sedEffectiveGamma()   { return sed.gammaPeak * (1 + 0.8*sedFlarePulse()); }
+function sedEffectiveNorm()    { return 1 + 1.0*sedFlarePulse(); }         // electron/normalization boost
+function sedEffectiveCompton() { return sed.comptonDominance * Math.pow(sedEffectiveNorm(), 2); } // SSC: quadratic in electron density
+
+function sedSyncPeakNu() {
+  // standard synchrotron characteristic frequency, Doppler-boosted to the observer frame
+  const g = sedEffectiveGamma();
+  return 4.2e6 * sed.bField * g*g * sed.delta;
+}
+function sedICPeakNu() {
+  // SSC: the same electrons up-scatter their own synchrotron photons by ~gamma^2 again
+  const g = sedEffectiveGamma();
+  return sedSyncPeakNu() * g*g;
+}
+function sedCurvature() {
+  return Math.max(0.08, 0.2 + 0.15*(sed.p - 2.5));
+}
+function sedHump(nu, nuPeak, Fpeak, curvature) {
+  const x = Math.log10(Math.max(1e-30, nu/nuPeak));
+  return Fpeak * Math.pow(10, -curvature*x*x);
+}
+function sedBlazarClass(nuSyncPeak) {
+  if (nuSyncPeak < 1e14) return 'LSP (low synch. peaked)';
+  if (nuSyncPeak <= 1e15) return 'ISP (intermediate)';
+  return 'HSP (high synch. peaked)';
+}
+function sedHzToEV(nu) { return H_EV_S * nu; }
+function sedFormatEnergy(eV) {
+  if (eV >= 1e12) return (eV/1e12).toFixed(2) + ' TeV';
+  if (eV >= 1e9)  return (eV/1e9).toFixed(2) + ' GeV';
+  if (eV >= 1e6)  return (eV/1e6).toFixed(2) + ' MeV';
+  if (eV >= 1e3)  return (eV/1e3).toFixed(2) + ' keV';
+  return eV.toFixed(2) + ' eV';
+}
+
+function updateSEDReadouts() {
+  const nuS = sedSyncPeakNu(), nuI = sedICPeakNu();
+  const eS = sedHzToEV(nuS), eI = sedHzToEV(nuI);
+  document.getElementById('ro-sed-class').textContent = sedBlazarClass(nuS);
+  document.getElementById('ro-sed-syncnu').textContent = nuS.toExponential(2) + ' Hz';
+  document.getElementById('ro-sed-synce').textContent = sedFormatEnergy(eS);
+  document.getElementById('ro-sed-icnu').textContent = nuI.toExponential(2) + ' Hz';
+  document.getElementById('ro-sed-ice').textContent = sedFormatEnergy(eI);
+  document.getElementById('ro-sed-tev').textContent = (eI >= 1e11) ? 'yes — IACT band (FACT/MAGIC/H.E.S.S.)' : 'no — below TeV';
+}
+
+function updateSED(dt) {
+  sed.time += dt;
+  if (sed.flarePlaying) {
+    sed.flareT += dt;
+    const nuS = sedSyncPeakNu(), nuI = sedICPeakNu();
+    const fSync = sedHump(nuS, nuS, sedEffectiveNorm(), sedCurvature());
+    const fIC   = sedHump(nuI, nuI, sedEffectiveCompton(), sedCurvature());
+    sed.lightcurve.push({ t: sed.time, fSync, fIC });
+    if (sed.lightcurve.length > 300) sed.lightcurve.shift();
+    updateSEDReadouts();
+    if (sed.flareT >= sed.flareDuration) {
+      sed.flarePlaying = false;
+      document.getElementById('btn-sed-flare').textContent = 'Play Flare';
+    }
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+//  PULSAR P-Ṗ DIAGRAM — magnetic dipole spin-down (braking index n=3,
+//  constant B field), the standard textbook evolutionary track
+// ═══════════════════════════════════════════════════════════════════
+const psr = { P0: 0.02, B: 1e12, ageYears: 1, playing: false, trail: [] };
+const YEAR_S = 3.1557e7;
+
+function psrPdotAt(P, B) { return Math.pow(B/3.2e19, 2) / P; }
+function psrStateAtAge(ageYears) {
+  const Pdot0 = psrPdotAt(psr.P0, psr.B);
+  const tSec = ageYears * YEAR_S;
+  const P = Math.sqrt(psr.P0*psr.P0 + 2*psr.P0*Pdot0*tSec);
+  const Pdot = psrPdotAt(P, psr.B);
+  return { P, Pdot };
+}
+function psrCharAgeYears(P, Pdot) { return (P/(2*Pdot)) / YEAR_S; }
+function psrEdot(P, Pdot) { return 3.95e31 * Pdot / Math.pow(P,3); } // erg/s, I=1e45 g cm^2
+function psrDeathlinePdot(P) { return Math.pow(10, -16.58) * P*P; } // illustrative B/P^2 death line
+function psrCategory(P, Pdot, B) {
+  if (P < 0.03 && Pdot < 1e-18) return 'Millisecond pulsar (recycled)';
+  if (B > 1e14) return 'Magnetar-like';
+  if (Pdot < psrDeathlinePdot(P)) return 'Below death line (radio-quiet?)';
+  return 'Normal (young/adult) pulsar';
+}
+function psrFormatSci(x, unit) { return x.toExponential(2) + (unit||''); }
+
+function updatePulsarReadouts() {
+  const s = psrStateAtAge(psr.ageYears);
+  document.getElementById('ro-psr-cat').textContent = psrCategory(s.P, s.Pdot, psr.B);
+  document.getElementById('ro-psr-p').textContent = (s.P*1000).toFixed(2) + ' ms';
+  document.getElementById('ro-psr-pdot').textContent = psrFormatSci(s.Pdot);
+  document.getElementById('ro-psr-tauc').textContent = psrFormatSci(psrCharAgeYears(s.P, s.Pdot), ' yr');
+  document.getElementById('ro-psr-edot').textContent = psrFormatSci(psrEdot(s.P, s.Pdot), ' erg/s');
+  return s;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  IACT GAMMA-RAY AIR SHOWER — extensive air shower + Cherenkov light
+//  pool + camera image, illustrative EAS scaling relations
+// ═══════════════════════════════════════════════════════════════════
+const iact = {
+  energyGeV: 300, impactM: 60, attackDeg: 0, ptype: 'gamma',
+  firing: false, fireT: 0, fireDuration: 3.2,
+  seed: 12345, hillas: null, triggered: false,
+  view: 'single', wobbleOn: false, wobbleOffsetDeg: 0.4,
+  signalFraction: 0.12, alphaHistOn: new Array(9).fill(0), alphaHistOff: new Array(9).fill(0),
+  eventsRun: 0, landedEvents: [], queueRemaining: 0,
+  impactM2: 90, tel2AngleDeg: 90,
+};
+
+// Where an event's image lands azimuthally in the camera: a gamma image clusters near
+// the ON direction (it really does come from that direction), a hadron lands anywhere.
+function iactEventAzimuthDeg(ptype) {
+  if (ptype === 'gamma') return (Math.random()-0.5)*2*25;
+  return Math.random()*360;
+}
+
+function iactGaussianAbs(sigma) {
+  const u1 = Math.random(), u2 = Math.random();
+  return Math.abs(sigma * Math.sqrt(-2*Math.log(Math.max(1e-12,u1))) * Math.cos(2*Math.PI*u2));
+}
+function iactStatEvent() {
+  const isGamma = Math.random() < iact.signalFraction;
+  let alphaOn, alphaOff;
+  if (isGamma) {
+    alphaOn = Math.min(90, iactGaussianAbs(6));   // aligned with the TRUE (ON) source
+    alphaOff = Math.random()*90;                   // unrelated to an OFF position
+  } else {
+    alphaOn = Math.random()*90;                    // isotropic hadron background
+    alphaOff = Math.random()*90;
+  }
+  return { alphaOn, alphaOff, isGamma };
+}
+function iactRunEvents(n) {
+  for (let i = 0; i < n; i++) {
+    const e = iactStatEvent();
+    iact.alphaHistOn[Math.min(8, Math.floor(e.alphaOn/10))]++;
+    iact.alphaHistOff[Math.min(8, Math.floor(e.alphaOff/10))]++;
+    iact.eventsRun++;
+  }
+}
+function updateWobbleReadouts() {
+  const onLow = iact.alphaHistOn[0] + iact.alphaHistOn[1];
+  const offLow = iact.alphaHistOff[0] + iact.alphaHistOff[1];
+  const excess = onLow - offLow;
+  document.getElementById('ro-wob-events').textContent = iact.eventsRun;
+  document.getElementById('ro-wob-on').textContent = onLow;
+  document.getElementById('ro-wob-off').textContent = offLow;
+  document.getElementById('ro-wob-excess').textContent = excess;
+  document.getElementById('ro-wob-sig').textContent = offLow > 0 ? (excess/Math.sqrt(offLow)).toFixed(2) : '–';
+}
+
+function iactRand() {
+  // simple seeded PRNG so a shower's random sub-structure is stable across frames
+  iact.seed = (iact.seed * 1103515245 + 12345) & 0x7fffffff;
+  return (iact.seed % 10000) / 10000;
+}
+
+function iactXmax(E_GeV) { const X0 = 37, Ec = 0.085; return X0 * Math.log(Math.max(2, E_GeV)/Ec); }
+function iactHmax(E_GeV) { const H = 7.0, X0vert = 1030; return -H * Math.log(iactXmax(E_GeV)/X0vert); } // km
+function iactNmax(E_GeV) { return E_GeV / 0.085; }
+function iactPoolRadius(E_GeV) { return Math.max(60, iactHmax(E_GeV) * 13); } // m, illustrative
+function iactInteractionKm(E_GeV) { return iactHmax(E_GeV) + 6; } // altitude where the visible cascade begins
+// A tilted ("attack angle") primary drifts the whole shower core sideways on the way down.
+// Scaled to the same ~100-200m range as impact distance (rather than the full ~10km shower
+// height) so the two sliders interact meaningfully instead of the drift instantly dwarfing
+// the light pool for any angle above a couple of degrees.
+function iactGroundDriftM(E_GeV, attackDeg) {
+  return 150 * Math.tan(attackDeg*Math.PI/180);
+}
+
+// The real geometric origin of the camera image: the telescope sits on the ground offset
+// from the shower core (impact parameter). Different altitudes along the shower axis are
+// seen from the telescope at different angles, and that angular *sweep* — not a literal
+// side-view photograph — is what the image "length" actually is. Small impact parameter =
+// looking almost straight along the cascade = round image. Large impact parameter =
+// viewing obliquely = elongated image, pointing back at the source direction.
+function iactSightlineGeometry() {
+  const hmax = iactHmax(iact.energyGeV);
+  const totalKm = hmax + 6;
+  const driftTotal = iactGroundDriftM(iact.energyGeV, iact.attackDeg);
+  const peakY = totalKm > 0 ? 6/(hmax+6) : 0.4;
+  function axisAngleDeg(y) {
+    const heightM = Math.max(80, totalKm*1000*(1-y));
+    const xAxisM = driftTotal*y;
+    return Math.atan2(xAxisM - iact.impactM, heightM) * 180/Math.PI;
+  }
+  const yTop = Math.max(0.02, peakY - 0.15);
+  const yBot = Math.min(0.94, peakY + 0.35);
+  return {
+    angTop: axisAngleDeg(yTop), angBot: axisAngleDeg(yBot), angMid: axisAngleDeg(peakY),
+    yTop, yBot, peakY, totalKm, driftTotal,
+  };
+}
+
+function iactComputeHillas() {
+  const E = iact.energyGeV, impact = iact.impactM, ptype = iact.ptype;
+  const hmax = iactHmax(E);
+  const poolR = iactPoolRadius(E);
+  const drift = iactGroundDriftM(E, iact.attackDeg);
+  const effImpact = Math.abs(impact - drift); // distance from telescope to the (tilted) shower core
+  const geo = iactSightlineGeometry();
+  const seedBase = iact.seed;
+
+  if (ptype === 'muon') {
+    // A single through-going muon: fixed Cherenkov-angle ring, no cascade, no energy dependence.
+    const ringRadiusDeg = 1.15 + 0.15*Math.sin(hmax*0.3);
+    const completeness = Math.max(0.18, Math.min(1, 1 - effImpact/110));
+    iact.seed = seedBase;
+    const triggered = effImpact < Math.max(poolR, 130);
+    return { hmax, poolR, distanceDeg: Math.min(2.6,Math.abs(geo.angMid)), ringRadiusDeg, completeness, ptype, sizeRel: 1, triggered };
+  }
+
+  // Length comes directly from the angular sweep the telescope actually sees across the
+  // shower's altitude range — the same geometry drawn as sightlines in the atmosphere panel.
+  const distanceDeg = Math.min(2.6, Math.abs(geo.angMid));
+  let lengthDeg = Math.min(1.3, Math.max(0.05, Math.abs(geo.angBot - geo.angTop)));
+  // Width: transverse (Moliere-radius-like) shower spread projected at the same distance,
+  // combined with the intrinsic ~0.1-0.2 degree Cherenkov emission-angle floor. Scaled so
+  // gamma images come out properly elongated (width/length ~ 0.3, matching real Hillas
+  // parameters) rather than the near-circular blobs a raw lateral/height ratio gives.
+  const lateralM = (20 + 7*Math.log10(Math.max(2,E)/10)) * 0.35;
+  const heightAtMaxM = Math.max(200, geo.totalKm*1000*(1-geo.peakY));
+  const widthGeomDeg = Math.atan(lateralM/heightAtMaxM) * 180/Math.PI;
+  let widthDeg = Math.sqrt(widthGeomDeg*widthGeomDeg + 0.05*0.05);
+  let alphaDeg;
+  if (ptype === 'hadron') {
+    // Hadronic sub-showers scatter transversely and don't share the gamma's clean radial
+    // alignment with the assumed source, so both width and pointing get genuinely irregular.
+    lengthDeg *= 1.0 + iactRand()*0.5;
+    widthDeg  *= 2.0 + iactRand()*1.4;
+    alphaDeg = iactRand()*85 + 5;
+  } else {
+    // A gamma shower's elongation is inherently radial (it lies along the true sightline
+    // sweep toward the source) — alpha near zero is a geometric fact here, not an assumption;
+    // only a small jitter representing realistic image-parameter reconstruction noise is added.
+    alphaDeg = iactRand()*4;
+  }
+  iact.seed = seedBase; // don't let readout calls consume randomness differently from render
+  const triggered = effImpact < poolR;
+  // DISP-style sign determination: real single-telescope analyses (e.g. FACT's disp
+  // reconstruction) get the head/tail side from an asymmetry-based classifier that is
+  // NOT perfect — reported accuracy is roughly 65% analytically, up to ~85-90% with a
+  // trained model. We draw a per-event coin flip at that rate rather than always
+  // "knowing" the right side, so the reconstruction can visibly miss sometimes.
+  const dispSignAccuracy = ptype === 'gamma' ? 0.82 : 0.5;
+  const dispSignCorrect = iactRand() < dispSignAccuracy;
+  iact.seed = seedBase;
+  return { hmax, poolR, distanceDeg, lengthDeg, widthDeg, alphaDeg, ptype, sizeRel: iactNmax(E), triggered, dispSignCorrect };
+}
+
+function iactClassify(h) {
+  if (h.ptype === 'muon') return 'Muon ring (calibration event)';
+  // Alpha (does the image point back at the assumed source?) is the robust cut here —
+  // unlike a raw width/length ratio, it doesn't get confused by small-impact-parameter
+  // gamma events that are legitimately compact/round rather than elongated.
+  const gammaLike = h.alphaDeg < 15 && h.widthDeg < 0.4;
+  return gammaLike ? 'Gamma-like' : 'Hadron-like (background)';
+}
+
+function updateIACTReadouts() {
+  const hmax = iactHmax(iact.energyGeV), nmax = iactNmax(iact.energyGeV), pool = iactPoolRadius(iact.energyGeV);
+  const drift = iactGroundDriftM(iact.energyGeV, iact.attackDeg);
+  const effImpact = Math.abs(iact.impactM - drift);
+  document.getElementById('ro-iact-hmax').textContent = hmax.toFixed(1) + ' km';
+  document.getElementById('ro-iact-nmax').textContent = iact.ptype === 'muon' ? 'n/a (single track)' : nmax.toExponential(2);
+  document.getElementById('ro-iact-pool').textContent = pool.toFixed(0) + ' m';
+  document.getElementById('ro-iact-intrigger').textContent = (effImpact < pool) ? 'yes' : 'no — too far out';
+  const sec = document.getElementById('iact-hillas-section');
+  if (iact.hillas) {
+    sec.style.display = '';
+    if (iact.hillas.ptype === 'muon') {
+      document.getElementById('lbl-iact-length').textContent = 'Length';
+      document.getElementById('lbl-iact-width').textContent = 'Ring radius';
+      document.getElementById('lbl-iact-alpha').textContent = 'Arc completeness';
+      document.getElementById('ro-iact-length').textContent = 'n/a (ring, not ellipse)';
+      document.getElementById('ro-iact-width').textContent = iact.hillas.ringRadiusDeg.toFixed(3) + '°';
+      document.getElementById('ro-iact-distance').textContent = iact.hillas.distanceDeg.toFixed(3) + '°';
+      document.getElementById('ro-iact-alpha').textContent = (iact.hillas.completeness*100).toFixed(0) + '%';
+    } else {
+      document.getElementById('lbl-iact-length').textContent = 'Length';
+      document.getElementById('lbl-iact-width').textContent = 'Width';
+      document.getElementById('lbl-iact-alpha').textContent = 'Alpha';
+      document.getElementById('ro-iact-length').textContent = iact.hillas.lengthDeg.toFixed(3) + '°';
+      document.getElementById('ro-iact-width').textContent = iact.hillas.widthDeg.toFixed(3) + '°';
+      document.getElementById('ro-iact-distance').textContent = iact.hillas.distanceDeg.toFixed(3) + '°';
+      document.getElementById('ro-iact-alpha').textContent = iact.hillas.alphaDeg.toFixed(1) + '°';
+    }
+    document.getElementById('ro-iact-classify').textContent = iactClassify(iact.hillas);
+  } else {
+    sec.style.display = 'none';
+  }
+}
+
+function updateIACT(dt) {
+  if (iact.firing) {
+    iact.fireT += dt;
+    if (iact.fireT >= iact.fireDuration) {
+      iact.firing = false;
+      iact.hillas = iact.pendingHillas;
+      iact.landedEvents.push({
+        distanceDeg: iact.hillas.distanceDeg,
+        azimuthDeg: iactEventAzimuthDeg(iact.ptype),
+        ptype: iact.ptype,
+        classification: iactClassify(iact.hillas),
+      });
+      if (iact.landedEvents.length > 60) iact.landedEvents.shift();
+      document.getElementById('btn-iact-fire').textContent = 'Fire Shower';
+      updateIACTReadouts();
+      if (iact.queueRemaining > 0) {
+        setTimeout(iactStartNextQueuedFire, 250);
+      }
+    }
+  }
+}
+
+function iactStartNextQueuedFire() {
+  if (iact.queueRemaining <= 0) return;
+  if (iact._preQueueImpact === undefined) {
+    iact._preQueueImpact = iact.impactM;
+    iact._preQueueAttack = iact.attackDeg;
+  }
+  iact.queueRemaining--;
+  iact.ptype = Math.random() < iact.signalFraction ? 'gamma' : 'hadron';
+  // Randomize where each shot actually lands, rather than repeating the same geometry 5x
+  iact.impactM = Math.round(Math.random()*180);
+  iact.attackDeg = Math.round(Math.random()*Math.random()*25); // usually small, occasionally larger
+  const impactSl = document.getElementById('sl-iact-impact');
+  if (impactSl) { impactSl.value = iact.impactM; document.getElementById('sv-iact-impact').textContent = iact.impactM+' m'; }
+  const attackSl = document.getElementById('sl-iact-attack');
+  if (attackSl) { attackSl.value = iact.attackDeg; document.getElementById('sv-iact-attack').textContent = iact.attackDeg+'°'; }
+  const btn = document.getElementById('btn-iact-ptype');
+  if (btn) btn.textContent = 'Type: ' + IACT_PTYPE_LABEL[iact.ptype];
+  iact.firing = true;
+  iact.fireT = 0;
+  iact.hillas = null;
+  iact.seed = Math.floor(Math.random()*1e9);
+  iactGenerateBranches();
+  iact.pendingHillas = iactComputeHillas();
+  const fireBtn = document.getElementById('btn-iact-fire');
+  if (fireBtn) fireBtn.textContent = 'Firing…';
+  updateIACTReadouts();
+  if (iact.queueRemaining === 0) {
+    // restore the user's manual slider values once the burst finishes queuing (not firing)
+    setTimeout(() => {
+      if (iact._preQueueImpact !== undefined && !iact.firing) {
+        iact.impactM = iact._preQueueImpact; iact.attackDeg = iact._preQueueAttack;
+        document.getElementById('sl-iact-impact').value = iact.impactM;
+        document.getElementById('sv-iact-impact').textContent = iact.impactM+' m';
+        document.getElementById('sl-iact-attack').value = iact.attackDeg;
+        document.getElementById('sv-iact-attack').textContent = iact.attackDeg+'°';
+        iact._preQueueImpact = undefined;
+      }
+    }, iact.fireDuration*1000 + 100);
+  }
+}
+
+
+function hrLuminosityMS(M) { return Math.pow(M, 3.5); }
+function hrRadiusMS(M)     { return Math.pow(M, 0.8); }
+function hrTeffMS(M) {
+  const L = hrLuminosityMS(M), R = hrRadiusMS(M);
+  return 5772 * Math.pow(L, 0.25) / Math.pow(R, 0.5);
+}
+function hrLifetimeGyr(M) { return 10.0 * Math.pow(M, -2.5); } // Sun ~10 Gyr
+
+// f = age / main-sequence lifetime. Returns {L, T, R, stage}
+function hrTrack(M, f) {
+  const Lms = hrLuminosityMS(M), Tms = hrTeffMS(M);
+  if (f <= 1.0) {
+    // mild brightening/cooling across the main sequence (core mean-molecular-weight increase)
+    return { L: Lms*(1+0.3*f), T: Tms*(1-0.06*f), R: hrRadiusMS(M)*(1+0.15*f), stage: 'Main Sequence' };
+  }
+  const highMass = M >= 8;
+  if (f <= 1.3) {
+    // post-MS: rapid expansion and cooling toward the giant branch
+    const g = (f-1.0)/0.3;
+    const Lgiant = Lms * (highMass ? 8 : 100 + 400*Math.pow(M,0.3));
+    const Tgiant = 4200;
+    return {
+      L: Lms + (Lgiant-Lms)*g,
+      T: Tms + (Tgiant-Tms)*g,
+      R: hrRadiusMS(M) * (1 + g*(highMass?10:60)),
+      stage: highMass ? 'Supergiant' : 'Red Giant',
+    };
+  }
+  if (highMass) {
+    return { L: Lms*8, T: 4200, R: hrRadiusMS(M)*10, stage: 'Core-collapse SN → remnant' };
+  }
+  // white dwarf cooling track for f > 1.3
+  const g = Math.min(1, (f-1.3)/0.5);
+  const Twd = 20000*(1-g) + 4000*g;
+  return { L: 0.001*Math.pow(M,0.3), T: Twd, R: 0.01, stage: 'White Dwarf (cooling)' };
+}
+
+function hrFormatL(L) {
+  if (L >= 1000 || L < 0.01) return L.toExponential(2) + ' L☉';
+  return L.toFixed(3) + ' L☉';
+}
+
+function updateHRReadouts() {
+  const tr = hrTrack(hr.mass, hr.age);
+  document.getElementById('ro-hr-stage').textContent = tr.stage;
+  document.getElementById('ro-hr-teff').textContent = Math.round(tr.T) + ' K';
+  document.getElementById('ro-hr-lum').textContent = hrFormatL(tr.L);
+  document.getElementById('ro-hr-radius').textContent = tr.R.toFixed(2) + ' R☉';
+  document.getElementById('ro-hr-lifetime').textContent = hrLifetimeGyr(hr.mass).toFixed(2) + ' Gyr';
+  return tr;
+}
+
+
 let wDirs, wFreqs, wSpeeds, wAmps, wPhases;
 function buildWaveComponents() {
   const n = Math.round(state.waveCount);
@@ -1597,6 +2396,12 @@ function commitShape(worldPts) {
 //  AGN SPINE-SHEATH JET — side-view diagram (drawn on the overlay canvas)
 // ═══════════════════════════════════════════════════════════════════
 function drawAGN() {
+  if (agn.view === 'sky') drawAGNSky();
+  else if (agn.view === 'particles') drawAGNParticles();
+  else drawAGNProfile();
+}
+
+function drawAGNProfile() {
   const ctx = oc;
   ctx.save();
   ctx.clearRect(0, 0, imgW, imgH);
@@ -1628,8 +2433,10 @@ function drawAGN() {
   ctx.restore();
 
   // Opening half-angles: illustrative Gamma*theta ~ const relation (wider Gamma -> narrower jet)
-  const spineHalfDeg  = Math.min(22, Math.max(1.5, 55 / agn.gammaSpine));
-  const sheathHalfDeg = Math.min(38, Math.max(spineHalfDeg + 3, 55 / agn.gammaSheath));
+  // External pressure confinement: denser ISM squeezes the outflow into a narrower cone
+  const confine = Math.pow(agn.ambientDensity, 0.28);
+  const spineHalfDeg  = Math.min(22, Math.max(1.5, 55 / agn.gammaSpine / confine));
+  const sheathHalfDeg = Math.min(38, Math.max(spineHalfDeg + 3, 55 / agn.gammaSheath / confine));
 
   function tubeHalfWidth(x, halfDeg, shearAmp, shearFreq, shearSpeed, t) {
     const frac = Math.max(0, (x - engineX) / jetLen);
@@ -1750,6 +2557,401 @@ function drawAGN() {
   ctx.restore();
 }
 
+// ─────────────────────────────────────────────────────────────────
+// "Down the jet" sky view: what a distant observer actually sees —
+// a compact core plus a foreshortened jet trail, with a live race
+// between a true-lightspeed marker and the apparent (often
+// superluminal) knot, to make beta_app > c visceral rather than
+// just a number.
+// ─────────────────────────────────────────────────────────────────
+function drawAGNSky() {
+  const ctx = oc;
+  ctx.save();
+  ctx.clearRect(0, 0, imgW, imgH);
+  const bg = ctx.createRadialGradient(imgW*0.4, imgH*0.5, 10, imgW*0.4, imgH*0.5, imgW*0.6);
+  bg.addColorStop(0, '#0a0e18'); bg.addColorStop(1, '#04050a');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, imgW, imgH);
+
+  // Starfield
+  let seed = 777;
+  function rnd() { seed = (seed*1103515245 + 12345) & 0x7fffffff; return (seed % 10000)/10000; }
+  for (let i = 0; i < 140; i++) {
+    const x = rnd()*imgW, y = rnd()*imgH, r = 0.5 + rnd();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(180,200,230,${(0.15+0.25*rnd()).toFixed(3)})`;
+    ctx.fill();
+  }
+
+  const c = agnComputeAll();
+  const thetaRad = c.thetaRad;
+  const coreX = imgW*0.38, coreY = imgH*0.5;
+  const trailAngle = -28 * Math.PI/180; // arbitrary projected position angle, purely a display choice
+  const dirX = Math.cos(trailAngle), dirY = Math.sin(trailAngle);
+  const trailMaxLen = Math.min(imgW, imgH) * 0.5 / Math.pow(agn.ambientDensity, 0.3);
+  // Foreshortening: nearly end-on (small theta) -> jet collapses toward the core, like a real blazar's compact core
+  const trailLen = trailMaxLen * Math.max(0.05, Math.sin(thetaRad));
+
+  // Faint extended trail (the resolved, sheath-scale emission)
+  const trailGrad = ctx.createLinearGradient(coreX, coreY, coreX+dirX*trailLen, coreY+dirY*trailLen);
+  trailGrad.addColorStop(0, 'rgba(255,170,110,0.55)');
+  trailGrad.addColorStop(1, 'rgba(255,120,70,0.0)');
+  ctx.strokeStyle = trailGrad;
+  ctx.lineWidth = 10;
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(coreX, coreY); ctx.lineTo(coreX+dirX*trailLen, coreY+dirY*trailLen); ctx.stroke();
+
+  // Bright compact core — brightness set by the (heavily Doppler-boosted at small theta) spine flux
+  const coreBright = c.spine.flux / (c.spine.flux + 4);
+  const coreR = 8 + coreBright*20;
+  const coreGrad = ctx.createRadialGradient(coreX, coreY, 0, coreX, coreY, coreR*2.2);
+  coreGrad.addColorStop(0, `rgba(230,245,255,${(0.35+0.6*coreBright).toFixed(3)})`);
+  coreGrad.addColorStop(0.4, `rgba(150,210,255,${(0.20+0.4*coreBright).toFixed(3)})`);
+  coreGrad.addColorStop(1, 'rgba(150,210,255,0)');
+  ctx.beginPath(); ctx.arc(coreX, coreY, coreR*2.2, 0, Math.PI*2);
+  ctx.fillStyle = coreGrad; ctx.fill();
+
+  // ── The race: a true-c reference marker vs the apparent (super)luminal knot ──
+  const betaApp = Math.max(0.001, c.spine.betaApp);
+  const lightSpeedDuration = 5.0;                     // seconds for the reference dot to cross the full trail
+  const apparentDuration   = lightSpeedDuration / betaApp; // scales inversely -> faster when beta_app is bigger
+  const tC   = (agn.time % lightSpeedDuration) / lightSpeedDuration;
+  const tApp = (agn.time % apparentDuration) / apparentDuration;
+  const lapsC   = Math.floor(agn.time / lightSpeedDuration);
+  const lapsApp = Math.floor(agn.time / apparentDuration);
+
+  function drawLapPulse(t, color) {
+    // A brief expanding ring leaves the core right after each lap restarts —
+    // the apparent racer visibly pulses far more often than the reference.
+    if (t > 0.22) return;
+    const spread = t / 0.22;
+    const r = spread * 46;
+    const a = (1 - spread) * 0.55;
+    ctx.beginPath(); ctx.arc(coreX, coreY, r, 0, Math.PI*2);
+    ctx.strokeStyle = `rgba(${color},${a.toFixed(3)})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  function drawRacer(t, len, color, radius, tailN, tailStep) {
+    // Comet tail: ghost positions just behind "now" — the faster racer's ghosts
+    // are spaced further apart in space (same time gaps, more distance covered).
+    for (let i = tailN; i >= 1; i--) {
+      const tg = t - i*tailStep;
+      if (tg < 0) continue;
+      const gx = coreX + dirX*len*tg, gy = coreY + dirY*len*tg;
+      const a = (1 - i/tailN) * 0.35;
+      ctx.beginPath(); ctx.arc(gx, gy, radius*(0.55+0.3*(1-i/tailN)), 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${color},${a.toFixed(3)})`;
+      ctx.fill();
+    }
+    const x = coreX + dirX*len*t, y = coreY + dirY*len*t;
+    const grad = ctx.createRadialGradient(x, y, 0, x, y, radius*2.5);
+    grad.addColorStop(0, `rgba(${color},0.95)`);
+    grad.addColorStop(1, `rgba(${color},0)`);
+    ctx.beginPath(); ctx.arc(x, y, radius*2.5, 0, Math.PI*2);
+    ctx.fillStyle = grad; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI*2);
+    ctx.fillStyle = `rgb(${color})`; ctx.fill();
+    return [x, y];
+  }
+  const trackLen = trailLen * 0.94;
+  drawLapPulse(tC,   '210,215,225');
+  drawLapPulse(tApp, '110,225,255');
+  const [cx, cy]   = drawRacer(tC,   trackLen, '210,215,225', 4.5, 6, 0.03);
+  const [ax, ay]   = drawRacer(tApp, trackLen, '110,225,255', 5.5, 6, 0.03);
+
+  ctx.font = '11px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(210,215,225,0.9)';
+  ctx.fillText('1c (reference)', cx+8, cy-8);
+  ctx.fillStyle = 'rgba(110,225,255,0.95)';
+  ctx.fillText(`apparent: ${betaApp.toFixed(2)}c`, ax+8, ay+16);
+
+  // Scorecard
+  ctx.font = '12px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(220,230,240,0.85)';
+  ctx.fillText(`the "apparent" knot crosses the frame ${betaApp.toFixed(1)}× faster than the light-speed marker`, 20, imgH-52);
+  ctx.fillText(`(true bulk speed is only β = ${c.spine.beta.toFixed(4)}c — nothing here actually outran light)`, 20, imgH-32);
+  ctx.fillStyle = 'rgba(160,180,200,0.7)';
+  ctx.fillText(`laps — reference: ${lapsC}   apparent: ${lapsApp}`, 20, imgH-12);
+
+  // ── Explainer inset: why light-travel time makes it look superluminal ──
+  const ex = imgW - 210, ey = 90;
+  ctx.save();
+  ctx.translate(ex, ey);
+  ctx.font = '10px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(200,220,240,0.85)';
+  ctx.fillText('why it looks faster than light:', -60, -58);
+
+  // emission path A->B, inclined at theta to the line of sight (drawn vertical, observer far right)
+  const pathLen = 70;
+  const ax0 = -50, ay0 = 20;
+  const bx0 = ax0 + pathLen*Math.sin(thetaRad), by0 = ay0 - pathLen*Math.cos(thetaRad);
+  ctx.strokeStyle = 'rgba(255,200,140,0.8)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(ax0,ay0); ctx.lineTo(bx0,by0); ctx.stroke();
+  ctx.fillStyle = '#ffcf8c';
+  ctx.beginPath(); ctx.arc(ax0,ay0,3,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(bx0,by0,3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,220,180,0.8)'; ctx.fillText('A (t=0)', ax0-28, ay0+3); ctx.fillText('B (t=Δt)', bx0-6, by0-8);
+
+  // observer, far to the right
+  const obsX = 90, obsY = 0;
+  ctx.fillStyle = 'rgba(220,230,240,0.9)';
+  ctx.beginPath(); ctx.arc(obsX, obsY, 3, 0, Math.PI*2); ctx.fill();
+  ctx.fillText('observer', obsX-18, obsY-10);
+
+  // light rays from A and B to observer
+  ctx.strokeStyle = 'rgba(150,190,230,0.55)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ax0,ay0); ctx.lineTo(obsX,obsY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx0,by0); ctx.lineTo(obsX,obsY); ctx.stroke();
+
+  ctx.fillStyle = 'rgba(200,220,240,0.85)';
+  ctx.fillText('emitted Δt_e apart:', -60, 46);
+  ctx.fillText(`Δt_obs = Δt_e(1−β cosθ) = ${(1-c.spine.beta*Math.cos(thetaRad)).toFixed(3)}·Δt_e`, -60, 60);
+  ctx.fillText('B is closer to the observer, so its light', -60, 74);
+  ctx.fillText('arrives sooner — compressing the apparent', -60, 86);
+  ctx.fillText('time between snapshots, while the sideways', -60, 98);
+  ctx.fillText('distance A→B (projected) stays real:', -60, 110);
+  ctx.fillStyle = 'rgba(110,225,255,0.95)';
+  ctx.fillText(`β_app = β sinθ /(1−β cosθ) = ${c.spine.betaApp.toFixed(2)}c`, -60, 126);
+  ctx.restore();
+
+  drawBetaAppChart(imgW - 210, imgH - 165, 170, 100, c);
+
+  ctx.restore();
+}
+
+// Classic textbook curve: apparent speed vs viewing angle. Shows that the
+// superluminal peak sits near theta ~ 1/Gamma, not at theta = 0 — the
+// "down the barrel" view is actually past the peak, on the way back down.
+function drawBetaAppChart(x0, y0, w, h, c) {
+  const ctx = oc;
+  ctx.save();
+  ctx.translate(x0, y0);
+
+  ctx.fillStyle = 'rgba(8,12,20,0.55)';
+  ctx.fillRect(-8, -18, w+16, h+34);
+
+  ctx.strokeStyle = 'rgba(150,180,210,0.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,h); ctx.lineTo(w,h); ctx.stroke();
+
+  const yScale = h / (Math.max(agn.gammaSpine, agn.gammaSheath) * 1.15);
+
+  function curve(gamma, color) {
+    const beta = betaFromGamma(gamma);
+    ctx.beginPath();
+    for (let i = 0; i <= 90; i++) {
+      const thR = i * Math.PI/180;
+      const bapp = apparentBeta(beta, thR);
+      const x = (i/90)*w, y = h - Math.min(h, bapp*yScale);
+      if (i === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+  curve(agn.gammaSpine,  'rgba(140,210,255,0.9)');
+  curve(agn.gammaSheath, 'rgba(255,160,100,0.9)');
+
+  // current-theta marker + live dots
+  const mx = Math.min(w, (agn.thetaDeg/90)*w);
+  ctx.beginPath(); ctx.moveTo(mx,0); ctx.lineTo(mx,h);
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+  const ySpine  = h - Math.min(h, c.spine.betaApp * yScale);
+  const ySheath = h - Math.min(h, c.sheath.betaApp * yScale);
+  ctx.beginPath(); ctx.arc(mx, ySpine, 3, 0, Math.PI*2); ctx.fillStyle = 'rgba(140,210,255,1)'; ctx.fill();
+  ctx.beginPath(); ctx.arc(mx, ySheath, 3, 0, Math.PI*2); ctx.fillStyle = 'rgba(255,160,100,1)'; ctx.fill();
+
+  ctx.font = '9px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(200,220,240,0.75)';
+  ctx.fillText('β_app vs viewing angle θ', 0, -6);
+  ctx.fillText('0°', -3, h+11);
+  ctx.fillText('90°', w-12, h+11);
+  ctx.fillText(`peak ≈ θ=1/Γ`, w-58, 10);
+  ctx.restore();
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// Particle physics: how the jet actually makes gamma rays and neutrinos.
+// Four selectable channels, each drawn as a simple decay-tree diagram
+// with animated flow along every branch. Track style is a convention:
+// wavy = photon, dashed = neutrino (weakly-interacting, "invisible"),
+// solid = a charged particle.
+// ─────────────────────────────────────────────────────────────────
+const AGN_PROCESSES = {
+  synchrotron: {
+    label: 'Synchrotron',
+    caption: 'Relativistic electrons gyrating in the jet\'s magnetic field radiate synchrotron photons — radio through X-ray. This is the low-energy "hump" of the blazar spectrum.',
+  },
+  ssc: {
+    label: 'SSC (Inverse Compton)',
+    caption: 'The same electrons can up-scatter their own synchrotron photons to far higher energy — synchrotron self-Compton. This produces the GeV–TeV gamma-ray hump IACTs like FACT/MAGIC observe.',
+  },
+  pgamma: {
+    label: 'Photo-pion (pγ)',
+    caption: 'A relativistic proton hits a photon, forms a Δ+ resonance, and decays to pions. π0 → two gamma rays; π+ decays through a muon to a positron plus three neutrinos — one hadronic event, two messengers.',
+  },
+  pp: {
+    label: 'Hadronic (pp)',
+    caption: 'Where the fast spine shears against entrained matter (e.g. at the spine-sheath boundary), proton-proton collisions make a spray of pions — again decaying to gamma rays and neutrinos, the hadronic route to both messengers.',
+  },
+};
+
+function drawAGNParticles() {
+  const ctx = oc;
+  ctx.save();
+  ctx.clearRect(0, 0, imgW, imgH);
+  const bg = ctx.createLinearGradient(0,0,0,imgH);
+  bg.addColorStop(0,'#050810'); bg.addColorStop(1,'#02030a');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,imgW,imgH);
+
+  const t = agn.time;
+  const cx0 = imgW*0.5, cy0 = imgH*0.5;
+
+  // Draws one branch: kind = 'photon' | 'neutrino' | 'charged'
+  function track(x0,y0,x1,y1, kind, color, label, labelSide, speed) {
+    const dx = x1-x0, dy = y1-y0;
+    const len = Math.hypot(dx,dy);
+    const nx = dx/len, ny = dy/len;
+    ctx.beginPath();
+    if (kind === 'photon') {
+      const waves = Math.max(3, Math.floor(len/14));
+      const perpx = -ny, perpy = nx;
+      for (let i = 0; i <= waves*8; i++) {
+        const f = i/(waves*8);
+        const amp = 4*Math.sin(f*waves*Math.PI*2);
+        const px = x0+dx*f + perpx*amp, py = y0+dy*f + perpy*amp;
+        if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+      }
+      ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.stroke();
+    } else if (kind === 'neutrino') {
+      ctx.setLineDash([5,5]);
+      ctx.moveTo(x0,y0); ctx.lineTo(x1,y1);
+      ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.stroke();
+      ctx.setLineDash([]);
+    } else {
+      ctx.moveTo(x0,y0); ctx.lineTo(x1,y1);
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+    }
+    // arrowhead
+    const ah = 6;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x1-nx*ah-ny*ah*0.5, y1-ny*ah+nx*ah*0.5);
+    ctx.lineTo(x1-nx*ah+ny*ah*0.5, y1-ny*ah-nx*ah*0.5);
+    ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+    // traveling highlight dot
+    const ph = ((t*(speed||60)) % len) / len;
+    const hx = x0+dx*ph, hy = y0+dy*ph;
+    ctx.beginPath(); ctx.arc(hx,hy,2.6,0,Math.PI*2); ctx.fillStyle = color; ctx.fill();
+    // label
+    ctx.font = '10px "Share Tech Mono", monospace';
+    ctx.fillStyle = color;
+    const lx = x1 + (labelSide==='right'? 6 : labelSide==='left' ? -6-ctx.measureText(label).width : -ctx.measureText(label).width/2);
+    const ly = y1 + (labelSide==='down' ? 14 : labelSide==='up' ? -8 : 4);
+    ctx.fillText(label, lx, ly);
+  }
+  function vertex(x,y,r,color,label) {
+    const grad = ctx.createRadialGradient(x,y,0,x,y,r*2.2);
+    grad.addColorStop(0, `${color}`); grad.addColorStop(1, `${color.replace(/[\d.]+\)$/,'0)')}`);
+    ctx.beginPath(); ctx.arc(x,y,r*2.2,0,Math.PI*2); ctx.fillStyle = grad; ctx.fill();
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle = color; ctx.fill();
+    if (label) { ctx.font='11px "Share Tech Mono", monospace'; ctx.fillStyle='rgba(230,240,250,0.9)'; ctx.fillText(label, x-ctx.measureText(label).width/2, y+4); }
+  }
+
+  const P = '255,220,120'; // photon color
+  const N = '120,210,255'; // neutrino color
+  const CHG = '255,140,110'; // charged lepton/hadron color
+  const PROTON = '180,200,255';
+
+  if (agn.process === 'synchrotron') {
+    // B-field line
+    ctx.strokeStyle = 'rgba(120,150,190,0.35)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(imgW*0.1, cy0); ctx.lineTo(imgW*0.9, cy0); ctx.stroke();
+    ctx.fillStyle='rgba(150,175,210,0.6)'; ctx.font='10px monospace'; ctx.fillText('B field', imgW*0.1, cy0-10);
+    // helical electron path (approximate with sine wiggle along B)
+    ctx.beginPath();
+    const steps=120, ampY=34, waveN=5;
+    for (let i=0;i<=steps;i++){
+      const f=i/steps;
+      const x = imgW*0.15 + f*imgW*0.5;
+      const y = cy0 + Math.sin(f*waveN*Math.PI*2 + t*2)*ampY;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle = `rgb(${CHG})`; ctx.lineWidth=2; ctx.stroke();
+    vertex(imgW*0.15, cy0, 5, `rgb(${CHG})`, 'e⁻');
+    // emitted photons tangent to the helix at a few points
+    for (const f of [0.25,0.5,0.75]) {
+      const x = imgW*0.15 + f*imgW*0.5;
+      const y = cy0 + Math.sin(f*waveN*Math.PI*2 + t*2)*ampY;
+      track(x,y, x+imgW*0.28, y-70, 'photon', `rgb(${P})`, '', 'right', 40);
+    }
+    ctx.font='11px monospace'; ctx.fillStyle=`rgb(${P})`;
+    ctx.fillText('synchrotron photons (radio → X-ray)', imgW*0.45, cy0-110);
+
+  } else if (agn.process === 'ssc') {
+    vertex(imgW*0.2, cy0, 5, `rgb(${CHG})`, 'e⁻');
+    track(imgW*0.05, cy0+60, imgW*0.2, cy0, 'photon', `rgb(${P})`, 'γ (synchrotron, eV–keV)', 'left', 50);
+    vertex(imgW*0.5, cy0, 6, 'rgba(230,235,245,0.95)', '');
+    track(imgW*0.2, cy0, imgW*0.5, cy0, 'charged', `rgb(${CHG})`, 'e⁻ (unchanged, ~same γ)', 'down', 60);
+    track(imgW*0.5, cy0, imgW*0.85, cy0-90, 'photon', `rgb(${N})`, 'γ (IC-scattered, GeV–TeV)', 'right', 90);
+    ctx.font='11px monospace'; ctx.fillStyle='rgba(210,225,240,0.8)';
+    ctx.fillText('same electron population, much harder photon out', imgW*0.15, cy0+90);
+
+  } else if (agn.process === 'pgamma') {
+    vertex(imgW*0.12, cy0, 6, `rgb(${PROTON})`, 'p');
+    track(imgW*0.05, cy0-70, imgW*0.12, cy0, 'photon', `rgb(${P})`, 'γ_target', 'up', 50);
+    vertex(imgW*0.32, cy0, 7, 'rgba(255,200,150,0.95)', 'Δ+');
+    track(imgW*0.12, cy0, imgW*0.32, cy0, 'charged', `rgb(${PROTON})`, '', 'down', 60);
+    // Delta decays to pi0 (-> 2 gamma) and to pi+ (-> mu+ -> e+ + nus)
+    vertex(imgW*0.52, cy0-55, 5, 'rgba(150,255,170,0.95)', 'π0');
+    track(imgW*0.32, cy0, imgW*0.52, cy0-55, 'charged', 'rgba(150,255,170,0.9)', '', 'up', 55);
+    track(imgW*0.52, cy0-55, imgW*0.8, cy0-95, 'photon', `rgb(${P})`, 'γ', 'right', 70);
+    track(imgW*0.52, cy0-55, imgW*0.8, cy0-25, 'photon', `rgb(${P})`, 'γ', 'right', 65);
+
+    vertex(imgW*0.52, cy0+55, 5, 'rgba(150,255,170,0.95)', 'π+');
+    track(imgW*0.32, cy0, imgW*0.52, cy0+55, 'charged', 'rgba(150,255,170,0.9)', '', 'down', 55);
+    vertex(imgW*0.68, cy0+80, 5, 'rgba(255,180,220,0.95)', 'μ+');
+    track(imgW*0.52, cy0+55, imgW*0.68, cy0+80, 'charged', 'rgba(255,180,220,0.9)', 'ν_μ', 'down', 65);
+    track(imgW*0.68, cy0+80, imgW*0.85, cy0+55, 'charged', `rgb(${CHG})`, 'e+', 'right', 60);
+    track(imgW*0.68, cy0+80, imgW*0.85, cy0+95, 'neutrino', `rgb(${N})`, 'ν_e', 'right', 75);
+    track(imgW*0.68, cy0+80, imgW*0.85, cy0+130, 'neutrino', `rgb(${N})`, 'ν̄_μ', 'right', 80);
+
+  } else { // pp
+    vertex(imgW*0.14, cy0, 6, `rgb(${PROTON})`, 'p');
+    vertex(imgW*0.14, cy0+50, 6, `rgb(${PROTON})`, 'p');
+    vertex(imgW*0.34, cy0+25, 8, 'rgba(255,210,160,0.95)', '');
+    track(imgW*0.14, cy0, imgW*0.34, cy0+25, 'charged', `rgb(${PROTON})`, '', 'up', 55);
+    track(imgW*0.14, cy0+50, imgW*0.34, cy0+25, 'charged', `rgb(${PROTON})`, '', 'down', 55);
+    ctx.font='10px monospace'; ctx.fillStyle='rgba(220,230,240,0.7)';
+    ctx.fillText('spray of pions (π0, π±)', imgW*0.36, cy0-25);
+    // pion spray -> gammas and neutrinos (compressed version of the pgamma cascade)
+    vertex(imgW*0.56, cy0-40, 5, 'rgba(150,255,170,0.9)', 'π0');
+    track(imgW*0.34, cy0+25, imgW*0.56, cy0-40, 'charged', 'rgba(150,255,170,0.85)', '', 'up', 55);
+    track(imgW*0.56, cy0-40, imgW*0.82, cy0-70, 'photon', `rgb(${P})`, 'γ', 'right', 65);
+    track(imgW*0.56, cy0-40, imgW*0.82, cy0-15, 'photon', `rgb(${P})`, 'γ', 'right', 60);
+
+    vertex(imgW*0.56, cy0+90, 5, 'rgba(150,255,170,0.9)', 'π+');
+    track(imgW*0.34, cy0+25, imgW*0.56, cy0+90, 'charged', 'rgba(150,255,170,0.85)', '', 'down', 55);
+    track(imgW*0.56, cy0+90, imgW*0.82, cy0+65, 'charged', `rgb(${CHG})`, 'e+', 'right', 60);
+    track(imgW*0.56, cy0+90, imgW*0.82, cy0+100, 'neutrino', `rgb(${N})`, 'ν', 'right', 70);
+    track(imgW*0.56, cy0+90, imgW*0.82, cy0+130, 'neutrino', `rgb(${N})`, 'ν', 'right', 75);
+  }
+
+  // legend
+  ctx.font = '10px "Share Tech Mono", monospace';
+  ctx.fillStyle = `rgb(${P})`;   ctx.fillText('~~~ photon (γ)', 20, imgH-56);
+  ctx.fillStyle = `rgb(${N})`;   ctx.fillText('- - - neutrino (ν)', 20, imgH-40);
+  ctx.fillStyle = `rgb(${CHG})`; ctx.fillText('― charged particle', 20, imgH-24);
+
+  // process caption (also mirrored into the side panel)
+  const proc = AGN_PROCESSES[agn.process];
+  ctx.font = '12px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(230,240,250,0.9)';
+  ctx.fillText(proc.label, 20, 30);
+
+  ctx.restore();
+}
+
+
 function updateAGN(dt) {
   agn.time += dt;
   if (agn.sweep) {
@@ -1762,6 +2964,1268 @@ function updateAGN(dt) {
     document.getElementById('sv-agn-theta').textContent = agn.thetaDeg.toFixed(1) + '°';
   }
   updateAGNReadouts();
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+//  HR DIAGRAM rendering
+// ═══════════════════════════════════════════════════════════════════
+function hrTempToColor(T) {
+  // rough blackbody-ish mapping: hot -> blue/white, cool -> orange/red
+  if (T > 20000) return '200,220,255';
+  if (T > 10000) return '210,225,255';
+  if (T > 7500)  return '235,240,255';
+  if (T > 6000)  return '255,250,235';
+  if (T > 5200)  return '255,225,170';
+  if (T > 3700)  return '255,180,120';
+  return '255,130,90';
+}
+
+function drawHR() {
+  const ctx = oc;
+  ctx.save();
+  ctx.clearRect(0,0,imgW,imgH);
+  const bg = ctx.createLinearGradient(0,0,0,imgH);
+  bg.addColorStop(0,'#070810'); bg.addColorStop(1,'#03040a');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,imgW,imgH);
+
+  const marginL = 70, marginR = 30, marginT = 30, marginB = 50;
+  const plotW = imgW - marginL - marginR, plotH = imgH - marginT - marginB;
+  const Tmin = 2500, Tmax = 50000, Lmin = -4, Lmax = 6.2;
+
+  function xOf(T) {
+    const f = (Math.log10(T) - Math.log10(Tmin)) / (Math.log10(Tmax) - Math.log10(Tmin));
+    return marginL + (1-f)*plotW; // hot on the left
+  }
+  function yOf(L) {
+    const f = (Math.log10(L) - Lmin) / (Lmax - Lmin);
+    return marginT + (1-f)*plotH;
+  }
+
+  ctx.save();
+  ctx.translate(0,0);
+  ctx.beginPath(); ctx.rect(marginL, marginT, plotW, plotH); ctx.clip();
+
+  // Main sequence band (log L ~ 3.5*log M, log T ~ f(M)) drawn as a soft diagonal band
+  ctx.beginPath();
+  for (let m = -1; m <= 1.7; m += 0.05) {
+    const M = Math.pow(10,m);
+    const L = hrLuminosityMS(M), T = hrTeffMS(M);
+    const x = xOf(T), y = yOf(L);
+    if (m === -1) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle = 'rgba(140,180,255,0.25)'; ctx.lineWidth = 22; ctx.lineCap='round'; ctx.stroke();
+  ctx.strokeStyle = 'rgba(180,205,255,0.5)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = 'rgba(180,205,255,0.55)'; ctx.font = '10px "Share Tech Mono", monospace';
+  ctx.fillText('main sequence', xOf(9000), yOf(8)+ (yOf(8)>marginT? 0:0) );
+
+  // Giant branch region (soft ellipse, upper right)
+  ctx.beginPath(); ctx.ellipse(xOf(4200), yOf(300), 110, 90, -0.15, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,170,120,0.10)'; ctx.fill();
+  ctx.fillStyle = 'rgba(255,190,140,0.6)'; ctx.fillText('giants', xOf(4200)-70, yOf(300)-70);
+
+  // White dwarf region (lower left)
+  ctx.beginPath(); ctx.ellipse(xOf(12000), yOf(0.002), 90, 45, 0.1, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(200,220,255,0.10)'; ctx.fill();
+  ctx.fillStyle = 'rgba(210,225,255,0.6)'; ctx.fillText('white dwarfs', xOf(12000)-40, yOf(0.002)-40);
+
+  ctx.restore();
+
+  // Axes + ticks
+  ctx.strokeStyle = 'rgba(150,180,210,0.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(marginL, marginT); ctx.lineTo(marginL, marginT+plotH); ctx.lineTo(marginL+plotW, marginT+plotH); ctx.stroke();
+  ctx.font = '9.5px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(180,200,220,0.7)';
+  for (const T of [30000,10000,6000,4000,3000]) {
+    const x = xOf(T);
+    ctx.beginPath(); ctx.moveTo(x, marginT+plotH); ctx.lineTo(x, marginT+plotH+4); ctx.stroke();
+    ctx.fillText(T+'K', x-14, marginT+plotH+16);
+  }
+  for (const L of [-3,-1,1,3,5]) {
+    const y = yOf(Math.pow(10,L));
+    ctx.beginPath(); ctx.moveTo(marginL-4, y); ctx.lineTo(marginL, y); ctx.stroke();
+    ctx.fillText('10^'+L, 4, y+3);
+  }
+  ctx.save();
+  ctx.translate(16, marginT+plotH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('Luminosity (L☉)', -40, 0);
+  ctx.restore();
+  ctx.fillText('Effective Temperature', marginL+plotW/2-60, imgH-8);
+
+  // Sun reference
+  const sunX = xOf(5772), sunY = yOf(1);
+  ctx.beginPath(); ctx.arc(sunX, sunY, 3, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(255,220,140,0.8)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,220,140,0.7)'; ctx.fillText('☉', sunX+5, sunY-5);
+
+  // Trail (evolutionary track so far)
+  ctx.beginPath();
+  for (let i = 0; i < hr.trail.length; i++) {
+    const p = hr.trail[i];
+    const x = xOf(p.T), y = yOf(p.L);
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Current star
+  const tr = hrTrack(hr.mass, hr.age);
+  const sx = xOf(Math.max(Tmin, Math.min(Tmax, tr.T))), sy = yOf(Math.max(Math.pow(10,Lmin), Math.min(Math.pow(10,Lmax), tr.L)));
+  const col = hrTempToColor(tr.T);
+  const rad = Math.max(3, Math.min(16, 4 + 3*Math.log10(Math.max(0.05,tr.R))));
+  const grad = ctx.createRadialGradient(sx,sy,0,sx,sy,rad*2.4);
+  grad.addColorStop(0, `rgba(${col},0.9)`); grad.addColorStop(1, `rgba(${col},0)`);
+  ctx.beginPath(); ctx.arc(sx,sy,rad*2.4,0,Math.PI*2); ctx.fillStyle = grad; ctx.fill();
+  ctx.beginPath(); ctx.arc(sx,sy,rad,0,Math.PI*2); ctx.fillStyle = `rgb(${col})`; ctx.fill();
+
+  ctx.font = '12px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(230,240,250,0.9)';
+  ctx.fillText(`${tr.stage}`, marginL+10, marginT+16);
+  ctx.font = '10.5px "Share Tech Mono", monospace';
+  ctx.fillText(`M = ${hr.mass.toFixed(2)} M☉   age/t_MS = ${hr.age.toFixed(2)}`, marginL+10, marginT+32);
+
+  ctx.restore();
+}
+
+function updateHR(dt) {
+  if (hr.playing) {
+    const lifetimeSpan = 1.6; // in units of f = age/t_ms
+    hr.age += dt * 0.06;
+    if (hr.age > lifetimeSpan) hr.age = lifetimeSpan;
+    const sl = document.getElementById('sl-hr-age');
+    sl.value = Math.round(hr.age*100);
+    document.getElementById('sv-hr-age').textContent = hr.age.toFixed(2);
+    const tr = hrTrack(hr.mass, hr.age);
+    hr.trail.push({T: tr.T, L: tr.L});
+    if (hr.trail.length > 400) hr.trail.shift();
+    updateHRReadouts();
+    if (hr.age >= lifetimeSpan) {
+      hr.playing = false;
+      document.getElementById('btn-hr-play').textContent = 'Play Evolution';
+    }
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+//  GALAXY ROTATION CURVE rendering
+// ═══════════════════════════════════════════════════════════════════
+function drawRotation() {
+  const ctx = oc;
+  ctx.save();
+  ctx.clearRect(0,0,imgW,imgH);
+  const bg = ctx.createLinearGradient(0,0,0,imgH);
+  bg.addColorStop(0,'#070810'); bg.addColorStop(1,'#03040a');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,imgW,imgH);
+
+  const galaxyW = imgW * 0.46;
+  drawRotationGalaxy(0, 0, galaxyW, imgH);
+  drawRotationCurve(galaxyW, 0, imgW - galaxyW, imgH);
+
+  ctx.restore();
+}
+
+function drawRotationGalaxy(x0, y0, w, h) {
+  const ctx = oc;
+  ctx.save();
+  ctx.translate(x0, y0);
+  ctx.beginPath(); ctx.rect(0,0,w,h); ctx.clip();
+
+  const cx = w/2, cy = h/2;
+  const scale = (Math.min(w,h) * 0.46) / ROT_RMAX_DISPLAY;
+  const tiltR = rot.tilt * Math.PI/180;
+  const ct = Math.cos(tiltR), st = Math.sin(tiltR);
+
+  // Project (x,y,z) galaxy-frame coords through the current tilt.
+  // y,z mix into screen-vertical + depth; depth drives a front/back brightness cue.
+  function project(gx, gy, gz) {
+    const sy = gy*ct - gz*st;
+    const depth = gy*st + gz*ct; // >0 toward viewer
+    return { x: cx + gx*scale, y: cy + sy*scale, depth };
+  }
+
+  // Halo extent (very faint, for context — dark matter doesn't actually glow)
+  const haloR = ROT_RMAX_DISPLAY*1.15*scale;
+  const haloGrad = ctx.createRadialGradient(cx,cy,0,cx,cy,haloR);
+  haloGrad.addColorStop(0, rot.haloOn ? 'rgba(120,140,255,0.05)' : 'rgba(120,140,255,0.0)');
+  haloGrad.addColorStop(1, 'rgba(120,140,255,0)');
+  ctx.beginPath(); ctx.arc(cx,cy,haloR,0,Math.PI*2); ctx.fillStyle = haloGrad; ctx.fill();
+
+  // Dark matter halo particles: pressure-supported (dispersion), NOT ordered rotation —
+  // they jiggle around a fixed 3D position rather than sweeping cleanly around like the
+  // disk, and — unlike the disk — are spread in height too, so tilting the view shows
+  // a genuinely puffy ball rather than a flattened sheet.
+  if (rot.haloOn) {
+    for (const p of rot.haloParticles) {
+      const bx = p.r*Math.cos(p.angle0), by = p.r*Math.sin(p.angle0);
+      const jx = Math.sin(rot.time*p.freq1 + p.phase1) * p.jitterAmp;
+      const jy = Math.cos(rot.time*p.freq2 + p.phase2) * p.jitterAmp;
+      const jz = Math.sin(rot.time*p.freq3 + p.phase3) * p.jitterAmp;
+      const pr = project(bx+jx, by+jy, p.z0+jz);
+      const depthF = 0.55 + 0.35*Math.max(-1, Math.min(1, pr.depth/ROT_RMAX_DISPLAY));
+      ctx.beginPath(); ctx.arc(pr.x, pr.y, p.size*depthF, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(150,160,255,${(0.30*depthF).toFixed(3)})`; ctx.fill();
+    }
+  }
+
+  // Visible disk particles: ordered circular orbits at the ACTUAL total velocity
+  // (visible + halo gravity combined) — this is what makes them visibly outrun
+  // the pace the visible mass alone would set. Tilting the view collapses this
+  // population down into a thin plane, in sharp contrast to the puffy halo above.
+  for (const p of rot.diskParticles) {
+    const v = rotTotalVel(Math.max(0.3, p.r));
+    const omega = v / Math.max(0.3, p.r);
+    const theta = p.theta0 + rot.time*omega*ROT_TIME_K;
+    const gx = p.r*Math.cos(theta), gy = p.r*Math.sin(theta);
+    const pr = project(gx, gy, p.z);
+    const depthF = 0.6 + 0.4*Math.max(-1, Math.min(1, pr.depth/ROT_RMAX_DISPLAY));
+    const b = 0.55 + 0.45*Math.min(1, 8/(p.r+2));
+    ctx.beginPath(); ctx.arc(pr.x, pr.y, p.size*depthF, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(255,${Math.round(200+30*b)},${Math.round(140+60*b)},${(0.9*depthF).toFixed(3)})`;
+    ctx.fill();
+  }
+
+  // Central bulge glow
+  const bulge = ctx.createRadialGradient(cx,cy,0,cx,cy,14);
+  bulge.addColorStop(0,'rgba(255,240,210,0.9)'); bulge.addColorStop(1,'rgba(255,240,210,0)');
+  ctx.beginPath(); ctx.arc(cx,cy,14,0,Math.PI*2); ctx.fillStyle = bulge; ctx.fill();
+
+  ctx.font = '10px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(255,215,170,0.85)'; ctx.fillText('● visible matter (thin, rotating disk)', 12, h-40);
+  if (rot.haloOn) { ctx.fillStyle = 'rgba(150,160,255,0.85)'; ctx.fillText('● dark matter (puffy, non-rotating — illustrative)', 12, h-24); }
+  ctx.fillStyle = 'rgba(200,215,230,0.6)';
+  ctx.fillText(`tilt ${rot.tilt.toFixed(0)}° · not to scale`, 12, h-8);
+
+  ctx.restore();
+}
+
+function drawRotationCurve(x0, y0, w, h) {
+  const ctx = oc;
+  ctx.save();
+  ctx.translate(x0, y0);
+
+  const marginL = 60, marginR = 20, marginT = 30, marginB = 50;
+  const plotW = w - marginL - marginR, plotH = h - marginT - marginB;
+  const rMax = 30, vMax = 320;
+  function xOf(r) { return marginL + (r/rMax)*plotW; }
+  function yOf(v) { return marginT + (1 - v/vMax)*plotH; }
+
+  ctx.strokeStyle = 'rgba(150,180,210,0.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(marginL, marginT); ctx.lineTo(marginL, marginT+plotH); ctx.lineTo(marginL+plotW, marginT+plotH); ctx.stroke();
+  ctx.font = '9.5px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(180,200,220,0.7)';
+  for (let r = 0; r <= rMax; r += 5) {
+    const x = xOf(r);
+    ctx.beginPath(); ctx.moveTo(x, marginT+plotH); ctx.lineTo(x, marginT+plotH+4); ctx.stroke();
+    ctx.fillText(r+'', x-4, marginT+plotH+16);
+  }
+  for (let v = 0; v <= vMax; v += 50) {
+    const y = yOf(v);
+    ctx.beginPath(); ctx.moveTo(marginL-4, y); ctx.lineTo(marginL, y); ctx.stroke();
+    ctx.fillText(v+'', 4, y+3);
+  }
+  ctx.fillText('radius (kpc)', marginL+plotW/2-30, h-8);
+  ctx.save(); ctx.translate(16, marginT+plotH/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('orbital velocity (km/s)', -55, 0); ctx.restore();
+
+  const diskMassMsun = rot.diskMass * 1e10;
+
+  function curve(fn, color, width, dash) {
+    ctx.beginPath();
+    if (dash) ctx.setLineDash(dash);
+    for (let i = 0; i <= 120; i++) {
+      const r = (i/120)*rMax;
+      const v = fn(r);
+      const x = xOf(r), y = yOf(v);
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Visible-matter-only curve (Keplerian-like decline at large r)
+  curve(r => rotVisibleVel(r, diskMassMsun, rot.diskScale), 'rgba(255,190,120,0.85)', 1.6, [6,4]);
+  // Halo-only contribution
+  if (rot.haloOn) curve(r => rotHaloVel(r, rot.vInf, rot.coreRadius), 'rgba(150,180,255,0.7)', 1.4, [2,4]);
+  // Total observed curve
+  curve(r => rotTotalVel(r), 'rgba(140,255,200,0.95)', 2.6, null);
+
+  // A marker showing where the disk particles currently sit isn't meaningful
+  // (they span all radii); instead mark rMax used for the particle cloud.
+
+  // Legend
+  ctx.font = '10.5px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(255,190,120,0.9)'; ctx.fillText('- - - visible matter only', marginL+16, marginT+18);
+  if (rot.haloOn) { ctx.fillStyle = 'rgba(150,180,255,0.9)'; ctx.fillText('····· dark matter halo', marginL+16, marginT+34); }
+  ctx.fillStyle = 'rgba(140,255,200,0.95)'; ctx.fillText('― total (what we observe)', marginL+16, marginT+50);
+
+  ctx.font = '10.5px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(220,230,240,0.75)';
+  const msg = rot.haloOn
+    ? 'without dark matter the curve would fall off past the visible disk — it doesn\'t.'
+    : 'halo off: this is the falling, Keplerian-like curve visible matter alone predicts.';
+  wrapText(ctx, msg, marginL, h-28, plotW, 13);
+
+  ctx.restore();
+}
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '', ly = y;
+  for (const word of words) {
+    const test = line + word + ' ';
+    if (ctx.measureText(test).width > maxWidth && line) {
+      ctx.fillText(line, x, ly); line = word + ' '; ly += lineHeight;
+    } else line = test;
+  }
+  ctx.fillText(line, x, ly);
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+//  BLAZAR SED rendering: log(νFν) vs log(ν), the standard blazar plot
+// ═══════════════════════════════════════════════════════════════════
+function drawSED() {
+  const ctx = oc;
+  ctx.save();
+  ctx.clearRect(0,0,imgW,imgH);
+  const bg = ctx.createLinearGradient(0,0,0,imgH);
+  bg.addColorStop(0,'#070810'); bg.addColorStop(1,'#03040a');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,imgW,imgH);
+
+  const marginL = 66, marginR = 30, marginT = 30, marginB = 55;
+  const plotW = imgW - marginL - marginR, plotH = imgH - marginT - marginB;
+  const logNuMin = 8, logNuMax = 27; // radio through PeV gamma-rays
+
+  function xOf(logNu) { return marginL + ((logNu-logNuMin)/(logNuMax-logNuMin))*plotW; }
+
+  const nuS = sedSyncPeakNu(), nuI = sedICPeakNu();
+  const curvature = sedCurvature();
+  const FsyncPeak = sedEffectiveNorm();
+  const FicPeak = sedEffectiveCompton();
+
+  // y-scale fixed to the quiescent (non-flared) range so a flare visibly rises
+  // off the top rather than the axes silently rescaling underneath it
+  const yMaxLog = Math.log10(Math.max(1.0, sed.comptonDominance)) + 1.4;
+  const yMinLog = yMaxLog - 6;
+  function yOf(F) {
+    const lf = Math.log10(Math.max(1e-30, F));
+    return marginT + (1 - (lf-yMinLog)/(yMaxLog-yMinLog))*plotH;
+  }
+
+  // Axes
+  ctx.strokeStyle = 'rgba(150,180,210,0.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(marginL, marginT); ctx.lineTo(marginL, marginT+plotH); ctx.lineTo(marginL+plotW, marginT+plotH); ctx.stroke();
+  ctx.font = '9.5px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(180,200,220,0.7)';
+  const bandLabels = [[9,'radio'],[14,'IR/opt'],[17,'X-ray'],[21,'GeV'],[24,'TeV']];
+  for (const [logNu,name] of bandLabels) {
+    const x = xOf(logNu);
+    ctx.beginPath(); ctx.moveTo(x, marginT+plotH); ctx.lineTo(x, marginT+plotH+4); ctx.stroke();
+    ctx.fillText(name, x-14, marginT+plotH+16);
+    ctx.fillText('10^'+logNu, x-14, marginT+plotH+28);
+  }
+  ctx.fillText('log(ν) [Hz]', marginL+plotW/2-30, imgH-8);
+  ctx.save(); ctx.translate(16, marginT+plotH/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('log(ν F_ν)  [arbitrary units]', -70, 0); ctx.restore();
+
+  // Synchrotron hump
+  function drawHump(nuPeak, Fpeak, color) {
+    ctx.beginPath();
+    for (let i = 0; i <= 200; i++) {
+      const logNu = logNuMin + (i/200)*(logNuMax-logNuMin);
+      const nu = Math.pow(10, logNu);
+      const F = sedHump(nu, nuPeak, Fpeak, curvature);
+      const x = xOf(logNu), y = yOf(F);
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
+  }
+  drawHump(nuS, FsyncPeak, 'rgba(255,190,120,0.9)');
+  drawHump(nuI, FicPeak,   'rgba(140,210,255,0.9)');
+
+  // Total (sum in linear space)
+  ctx.beginPath();
+  for (let i = 0; i <= 200; i++) {
+    const logNu = logNuMin + (i/200)*(logNuMax-logNuMin);
+    const nu = Math.pow(10, logNu);
+    const F = sedHump(nu, nuS, FsyncPeak, curvature) + sedHump(nu, nuI, FicPeak, curvature);
+    const x = xOf(logNu), y = yOf(F);
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle = 'rgba(230,240,250,0.55)'; ctx.lineWidth = 1.2; ctx.stroke();
+
+  // Peak markers
+  function marker(nuPeak, Fpeak, color, label) {
+    const x = xOf(Math.log10(nuPeak)), y = yOf(Fpeak);
+    if (x < marginL || x > marginL+plotW) return;
+    ctx.beginPath(); ctx.arc(x,y,3.5,0,Math.PI*2); ctx.fillStyle = color; ctx.fill();
+    ctx.font = '10px "Share Tech Mono", monospace'; ctx.fillStyle = color;
+    ctx.fillText(label, x-18, y-10);
+  }
+  marker(nuS, FsyncPeak, 'rgba(255,210,150,1)', 'sync');
+  marker(nuI, FicPeak,   'rgba(170,225,255,1)', 'IC (SSC)');
+
+  // TeV/IACT band shading
+  const tevX0 = xOf(23.5), tevX1 = xOf(logNuMax);
+  ctx.fillStyle = 'rgba(140,210,255,0.06)';
+  ctx.fillRect(tevX0, marginT, tevX1-tevX0, plotH);
+  ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(140,210,255,0.5)';
+  ctx.fillText('IACT band', tevX0+4, marginT+12);
+
+  // Legend + class
+  ctx.font = '11px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(230,240,250,0.9)';
+  ctx.fillText(sedBlazarClass(nuS), marginL+16, marginT+18);
+  ctx.font = '10px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(255,190,120,0.9)'; ctx.fillText('― synchrotron (electrons in B-field)', marginL+16, marginT+36);
+  ctx.fillStyle = 'rgba(140,210,255,0.9)'; ctx.fillText('― inverse-Compton / SSC (up-scattered)', marginL+16, marginT+52);
+
+  if (sed.flarePlaying) {
+    const frac = sed.flareT/sed.flareDuration;
+    const phase = frac < 0.5 ? 'rising' : 'decaying';
+    ctx.font = '11px "Share Tech Mono", monospace';
+    ctx.fillStyle = 'rgba(255,210,140,0.95)';
+    ctx.fillText(`FLARE (${phase}) — note the gamma-ray hump brightening faster than the synchrotron hump (SSC ~ n²)`, marginL+16, marginT+plotH-10);
+  }
+
+  drawSEDLightcurve(imgW - 230, 20, 210, 130);
+
+  ctx.restore();
+}
+
+function drawSEDLightcurve(x0, y0, w, h) {
+  const ctx = oc;
+  ctx.save();
+  ctx.translate(x0, y0);
+  ctx.fillStyle = 'rgba(8,12,20,0.6)';
+  ctx.fillRect(-8, -16, w+16, h+30);
+  ctx.strokeStyle = 'rgba(150,180,210,0.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,h); ctx.lineTo(w,h); ctx.stroke();
+  ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(200,220,240,0.75)';
+  ctx.fillText('light curve (this flare)', 0, -6);
+
+  if (sed.lightcurve.length < 2) {
+    ctx.fillStyle = 'rgba(180,200,220,0.5)';
+    ctx.fillText('Play Flare to animate →', 4, h/2);
+    ctx.restore();
+    return;
+  }
+  const t0 = sed.lightcurve[0].t, t1 = sed.lightcurve[sed.lightcurve.length-1].t;
+  const tSpan = Math.max(0.5, t1-t0);
+  let maxF = 1e-9;
+  for (const p of sed.lightcurve) maxF = Math.max(maxF, p.fSync, p.fIC);
+
+  function line(key, color) {
+    ctx.beginPath();
+    for (let i = 0; i < sed.lightcurve.length; i++) {
+      const p = sed.lightcurve[i];
+      const x = ((p.t-t0)/tSpan)*w;
+      const y = h - (p[key]/maxF)*h;
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle = color; ctx.lineWidth = 1.6; ctx.stroke();
+  }
+  line('fSync', 'rgba(255,190,120,0.9)');
+  line('fIC',   'rgba(140,210,255,0.9)');
+  ctx.restore();
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+//  PULSAR P-Ṗ DIAGRAM rendering
+// ═══════════════════════════════════════════════════════════════════
+function drawPulsar() {
+  const ctx = oc;
+  ctx.save();
+  ctx.clearRect(0,0,imgW,imgH);
+  const bg = ctx.createLinearGradient(0,0,0,imgH);
+  bg.addColorStop(0,'#070810'); bg.addColorStop(1,'#03040a');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,imgW,imgH);
+
+  const marginL = 66, marginR = 30, marginT = 30, marginB = 50;
+  const plotW = imgW - marginL - marginR, plotH = imgH - marginT - marginB;
+  const logPmin = -3, logPmax = 1.2;     // 1 ms .. ~16 s
+  const logPdotMin = -21, logPdotMax = -9;
+
+  function xOf(P) { return marginL + ((Math.log10(P)-logPmin)/(logPmax-logPmin))*plotW; }
+  function yOf(Pdot) { return marginT + (1 - (Math.log10(Pdot)-logPdotMin)/(logPdotMax-logPdotMin))*plotH; }
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(marginL, marginT, plotW, plotH); ctx.clip();
+
+  // Population regions
+  ctx.beginPath(); ctx.ellipse(xOf(0.005), yOf(1e-19), 55, 45, 0, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(140,210,255,0.08)'; ctx.fill();
+  ctx.fillStyle = 'rgba(160,215,255,0.6)'; ctx.font='10px monospace'; ctx.fillText('millisecond pulsars', xOf(0.005)-58, yOf(1e-19)-48);
+
+  ctx.beginPath(); ctx.ellipse(xOf(4), yOf(3e-12), 70, 55, 0, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,140,140,0.08)'; ctx.fill();
+  ctx.fillStyle = 'rgba(255,160,160,0.6)'; ctx.fillText('magnetars', xOf(4)-30, yOf(3e-12)-58);
+
+  // Lines of constant B
+  ctx.font = '9px "Share Tech Mono", monospace';
+  for (const B of [1e8, 1e10, 1e12, 1e14]) {
+    ctx.beginPath();
+    for (let i=0;i<=1;i+=0.02) {
+      const logP = logPmin + i*(logPmax-logPmin);
+      const P = Math.pow(10,logP);
+      const Pdot = psrPdotAt(P, B);
+      const x = xOf(P), y = yOf(Pdot);
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle = 'rgba(150,180,220,0.25)'; ctx.lineWidth = 1; ctx.stroke();
+    const Plab = Math.pow(10, logPmax-0.15), ylab = yOf(psrPdotAt(Plab,B));
+    if (ylab > marginT && ylab < marginT+plotH) { ctx.fillStyle='rgba(150,180,220,0.5)'; ctx.fillText(`B=${B.toExponential(0)}G`, xOf(Plab)-40, ylab-4); }
+  }
+  // Lines of constant characteristic age
+  for (const tau of [1e3, 1e6, 1e9]) {
+    ctx.beginPath();
+    for (let i=0;i<=1;i+=0.02) {
+      const logP = logPmin + i*(logPmax-logPmin);
+      const P = Math.pow(10,logP);
+      const Pdot = P/(2*tau*YEAR_S);
+      const x = xOf(P), y = yOf(Pdot);
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle = 'rgba(180,160,220,0.2)'; ctx.lineWidth = 1; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // Death line
+  ctx.beginPath();
+  for (let i=0;i<=1;i+=0.02) {
+    const logP = logPmin + i*(logPmax-logPmin);
+    const P = Math.pow(10,logP);
+    const Pdot = psrDeathlinePdot(P);
+    const x = xOf(P), y = yOf(Pdot);
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle = 'rgba(255,120,120,0.4)'; ctx.lineWidth = 1.4; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,140,140,0.55)'; ctx.fillText('death line (approx.)', xOf(Math.pow(10,-1.2)), yOf(psrDeathlinePdot(Math.pow(10,-1.2)))-6);
+
+  ctx.restore();
+
+  // Axes
+  ctx.strokeStyle = 'rgba(150,180,210,0.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(marginL, marginT); ctx.lineTo(marginL, marginT+plotH); ctx.lineTo(marginL+plotW, marginT+plotH); ctx.stroke();
+  ctx.font = '9.5px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(180,200,220,0.7)';
+  for (const P of [0.001,0.01,0.1,1,10]) {
+    const x = xOf(P);
+    ctx.beginPath(); ctx.moveTo(x, marginT+plotH); ctx.lineTo(x, marginT+plotH+4); ctx.stroke();
+    ctx.fillText(P+'s', x-10, marginT+plotH+16);
+  }
+  for (let e = logPdotMin; e <= logPdotMax; e += 2) {
+    const y = yOf(Math.pow(10,e));
+    ctx.beginPath(); ctx.moveTo(marginL-4, y); ctx.lineTo(marginL, y); ctx.stroke();
+    ctx.fillText('10^'+e, 4, y+3);
+  }
+  ctx.fillText('Period P', marginL+plotW/2-25, imgH-8);
+  ctx.save(); ctx.translate(16, marginT+plotH/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('Period derivative Ṗ', -60, 0); ctx.restore();
+
+  // Trail + current pulsar
+  const cur = psrStateAtAge(psr.ageYears);
+  ctx.beginPath();
+  for (let i=0;i<psr.trail.length;i++){
+    const p = psr.trail[i];
+    const x = xOf(p.P), y = yOf(p.Pdot);
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  const px = xOf(Math.max(Math.pow(10,logPmin), Math.min(Math.pow(10,logPmax), cur.P)));
+  const py = yOf(Math.max(Math.pow(10,logPdotMin), Math.min(Math.pow(10,logPdotMax), cur.Pdot)));
+  const grad = ctx.createRadialGradient(px,py,0,px,py,10);
+  grad.addColorStop(0,'rgba(255,230,160,0.9)'); grad.addColorStop(1,'rgba(255,230,160,0)');
+  ctx.beginPath(); ctx.arc(px,py,10,0,Math.PI*2); ctx.fillStyle = grad; ctx.fill();
+  ctx.beginPath(); ctx.arc(px,py,3.5,0,Math.PI*2); ctx.fillStyle = 'rgba(255,235,180,1)'; ctx.fill();
+
+  ctx.font = '11px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(230,240,250,0.9)';
+  ctx.fillText(psrCategory(cur.P, cur.Pdot, psr.B), marginL+10, marginT+16);
+  ctx.font = '10.5px "Share Tech Mono", monospace';
+  ctx.fillText(`age ≈ ${psr.ageYears.toExponential(1)} yr`, marginL+10, marginT+32);
+
+  ctx.restore();
+}
+
+function updatePulsar(dt) {
+  if (psr.playing) {
+    psr.ageYears *= Math.pow(10, dt*0.35); // exponential sweep through decades of age
+    if (psr.ageYears > 1e8) psr.ageYears = 1e8;
+    const sl = document.getElementById('sl-psr-age');
+    sl.value = Math.round(Math.log10(psr.ageYears)*100);
+    document.getElementById('sv-psr-age').textContent = psr.ageYears.toExponential(1);
+    const s = psrStateAtAge(psr.ageYears);
+    psr.trail.push({P: s.P, Pdot: s.Pdot});
+    if (psr.trail.length > 400) psr.trail.shift();
+    updatePulsarReadouts();
+    if (psr.ageYears >= 1e8) {
+      psr.playing = false;
+      document.getElementById('btn-psr-play').textContent = 'Play Evolution';
+    }
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+//  IACT rendering: hex camera grid + branching shower generator
+// ═══════════════════════════════════════════════════════════════════
+function iactBuildCameraPixels() {
+  const pixels = [];
+  const spacing = 0.22, R = 2.6;
+  const rows = Math.ceil(R/(spacing*0.866))+1;
+  for (let row=-rows; row<=rows; row++) {
+    const y = row*spacing*0.866;
+    const xOffset = (row%2!==0) ? spacing/2 : 0;
+    for (let col=-rows; col<=rows; col++) {
+      const x = col*spacing + xOffset;
+      if (x*x+y*y <= R*R) pixels.push({x,y});
+    }
+  }
+  return pixels;
+}
+const IACT_CAMERA_PIXELS = iactBuildCameraPixels();
+
+iact.branches = []; iact.subshowers = [];
+
+function iactGenerateBranches() {
+  if (iact.ptype === 'muon') {
+    // A single through-going muon: no cascade, just one straight track to the ground.
+    iact.branches = [{x0:0, y0:0, x1:0, y1:1, gen:0, isMuon:true}];
+    iact.subshowers = [];
+    iact.peakY = 0.5;
+    return;
+  }
+  const branches = [];
+  const maxGen = 6;
+  const hmax = iactHmax(iact.energyGeV);
+  const interactionExtra = 6;
+  const peakY = interactionExtra / (hmax + interactionExtra);
+  iact.peakY = peakY;
+  function envelope(y) { const sigma = 0.28; return Math.exp(-Math.pow((y-peakY)/sigma, 2)); }
+  function recurse(x0,y0,x1,y1,gen) {
+    branches.push({x0,y0,x1,y1,gen});
+    if (gen>=maxGen) return;
+    const env = envelope(y1);
+    const spread = 0.16*env*(1-gen/maxGen*0.3);
+    for (let k=0;k<2;k++) {
+      const nx = x1 + (iactRand()-0.5)*spread*2;
+      const ny = Math.min(1, y1 + 1/maxGen);
+      recurse(x1,y1,nx,ny,gen+1);
+    }
+  }
+  recurse(0,0,0,1/maxGen,0);
+  iact.branches = branches;
+
+  iact.subshowers = [];
+  if (iact.ptype === 'hadron') {
+    const nSub = 2 + Math.floor(iactRand()*2);
+    for (let s=0; s<nSub; s++) {
+      const startGen = 2, maxSubGen = startGen+3;
+      const sx = (iactRand()-0.5)*0.5;
+      const sy = startGen/maxGen;
+      const sub = [];
+      function recurseSub(x0,y0,x1,y1,gen) {
+        sub.push({x0,y0,x1,y1,gen});
+        if (gen>=maxSubGen) return;
+        const spread = 0.10*(1-(gen-startGen)/(maxSubGen-startGen));
+        for (let k=0;k<2;k++) {
+          const nx = x1 + (iactRand()-0.5)*spread*2;
+          const ny = Math.min(1, y1 + (1-sy)/(maxSubGen-startGen));
+          recurseSub(x1,y1,nx,ny,gen+1);
+        }
+      }
+      recurseSub(sx,sy,sx,sy+0.08,startGen);
+      iact.subshowers.push(sub);
+    }
+  }
+}
+
+function iactCameraColor(v) {
+  v = Math.max(0, Math.min(1, v));
+  if (v < 0.001) return [10,14,22];
+  if (v < 0.33) { const f=v/0.33; return [Math.round(10+f*20), Math.round(14+f*80), Math.round(22+f*140)]; }
+  if (v < 0.66) { const f=(v-0.33)/0.33; return [Math.round(30+f*180), Math.round(94+f*140), Math.round(162-f*80)]; }
+  const f=(v-0.66)/0.34; return [Math.round(210+f*45), Math.round(234+f*20), Math.round(82-f*30)];
+}
+const IACT_PIXEL_SPACING_DEG = 0.22;
+const IACT_HEX_R_DEG = IACT_PIXEL_SPACING_DEG / Math.sqrt(3);
+function iactHexPath(ctx, x, y, R) {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const ang = Math.PI/180*(60*i - 90);
+    const px = x + R*Math.cos(ang), py = y + R*Math.sin(ang);
+    if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.closePath();
+}
+
+function drawIACT() {
+  const ctx = oc;
+  ctx.save();
+  ctx.clearRect(0,0,imgW,imgH);
+  const bg = ctx.createLinearGradient(0,0,0,imgH);
+  bg.addColorStop(0,'#050810'); bg.addColorStop(1,'#020308');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,imgW,imgH);
+
+  if (iact.view === 'wobble') {
+    drawIACTWobble();
+  } else if (iact.view === 'stereo') {
+    drawIACTStereo();
+  } else {
+    const atmoW = imgW * 0.58;
+    drawIACTAtmosphere(0, 0, atmoW, imgH);
+    drawIACTCamera(atmoW, 0, imgW-atmoW, imgH);
+  }
+
+  ctx.restore();
+}
+
+function drawIACTWobble() {
+  const camW = imgW * 0.48;
+  drawIACTWobbleCamera(0, 0, camW, imgH);
+  drawIACTAlphaPlot(camW, 0, imgW-camW, imgH);
+}
+
+function drawIACTWobbleCamera(x0, y0, w, h) {
+  const ctx = oc;
+  ctx.save();
+  ctx.translate(x0, y0);
+  ctx.beginPath(); ctx.rect(0,0,w,h); ctx.clip();
+
+  const cx = w/2, cy = h/2;
+  const pxPerDeg = Math.min(w,h) * 0.16;
+  const off = iact.wobbleOffsetDeg;
+
+  ctx.font = '11px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(230,240,250,0.85)';
+  ctx.fillText('Wobble field of view', 14, 20);
+
+  // camera boundary
+  ctx.beginPath(); ctx.arc(cx, cy, 2.6*pxPerDeg, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(150,180,210,0.3)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-6,cy); ctx.lineTo(cx+6,cy); ctx.moveTo(cx,cy-6); ctx.lineTo(cx,cy+6);
+  ctx.strokeStyle = 'rgba(200,220,240,0.4)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(200,220,240,0.5)';
+  ctx.fillText('pointing center', cx+8, cy-2*pxPerDeg-6);
+
+  const regions = [
+    { name: 'ON',  angle: 0,             color: '140,255,190', hist: null },
+    { name: 'OFF', angle: Math.PI/2,     color: '255,180,120', hist: null },
+    { name: 'OFF', angle: Math.PI,       color: '255,180,120', hist: null },
+    { name: 'OFF', angle: 3*Math.PI/2,   color: '255,180,120', hist: null },
+  ];
+  const totalOn = iact.alphaHistOn.reduce((a,b)=>a+b,0);
+  const totalOff = iact.alphaHistOff.reduce((a,b)=>a+b,0);
+
+  for (const r of regions) {
+    const rx = cx + off*pxPerDeg*Math.cos(r.angle), ry = cy + off*pxPerDeg*Math.sin(r.angle);
+    const regionR = 0.35*pxPerDeg;
+    ctx.beginPath(); ctx.arc(rx, ry, regionR, 0, Math.PI*2);
+    ctx.setLineDash([3,3]);
+    ctx.strokeStyle = `rgba(${r.color},0.7)`; ctx.lineWidth = 1.3; ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = `rgba(${r.color},0.8)`;
+    ctx.fillText(r.name, rx-8, ry-regionR-4);
+
+    // scatter dots representing accumulated events (visual flavor, capped for perf)
+    const count = r.name === 'ON' ? totalOn : totalOff/3;
+    const nDots = Math.min(90, Math.round(count));
+    let seed2 = Math.round(rx*1000+ry);
+    for (let i = 0; i < nDots; i++) {
+      seed2 = (seed2*1103515245+12345)&0x7fffffff;
+      const rr = (seed2%1000)/1000;
+      seed2 = (seed2*1103515245+12345)&0x7fffffff;
+      const aa = (seed2%1000)/1000*Math.PI*2;
+      const dr = Math.sqrt(rr)*regionR*0.85;
+      const dx = rx+Math.cos(aa)*dr, dy = ry+Math.sin(aa)*dr;
+      ctx.beginPath(); ctx.arc(dx,dy,1.3,0,Math.PI*2);
+      ctx.fillStyle = `rgba(${r.color},0.55)`; ctx.fill();
+    }
+  }
+
+  ctx.font = '10px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(200,220,240,0.6)';
+  ctx.fillText('1 ON region + 3 reflected OFF regions,', 12, h-38);
+  ctx.fillText('same radius from the pointing center', 12, h-24);
+  ctx.fillText(`${iact.eventsRun} events simulated`, 12, h-8);
+
+  ctx.restore();
+}
+
+function drawIACTAlphaPlot(x0, y0, w, h) {
+  const ctx = oc;
+  ctx.save();
+  ctx.translate(x0, y0);
+
+  const marginL = 46, marginR = 20, marginT = 34, marginB = 46;
+  const plotW = w-marginL-marginR, plotH = h-marginT-marginB;
+  ctx.font = '11px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(230,240,250,0.85)';
+  ctx.fillText('Alpha plot', marginL, 20);
+
+  const maxCount = Math.max(1, ...iact.alphaHistOn, ...iact.alphaHistOff.map(v=>v/3));
+  ctx.strokeStyle = 'rgba(150,180,210,0.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(marginL,marginT); ctx.lineTo(marginL,marginT+plotH); ctx.lineTo(marginL+plotW,marginT+plotH); ctx.stroke();
+
+  const nBins = 9, bw = plotW/nBins;
+  ctx.font = '9px "Share Tech Mono", monospace';
+  for (let i = 0; i < nBins; i++) {
+    const x = marginL + i*bw;
+    const onH = (iact.alphaHistOn[i]/maxCount)*plotH;
+    const offH = ((iact.alphaHistOff[i]/3)/maxCount)*plotH;
+    ctx.fillStyle = 'rgba(140,255,190,0.75)';
+    ctx.fillRect(x+2, marginT+plotH-onH, bw*0.42, onH);
+    ctx.fillStyle = 'rgba(255,180,120,0.75)';
+    ctx.fillRect(x+2+bw*0.44, marginT+plotH-offH, bw*0.42, offH);
+    ctx.fillStyle = 'rgba(180,200,220,0.6)';
+    ctx.fillText((i*10)+'-'+(i*10+10), x+2, marginT+plotH+12);
+  }
+  ctx.fillText('alpha (degrees)', marginL+plotW/2-30, h-8);
+
+  ctx.font = '10px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(140,255,190,0.9)'; ctx.fillText('■ ON', marginL, marginT-8);
+  ctx.fillStyle = 'rgba(255,180,120,0.9)'; ctx.fillText('■ OFF (normalized /3)', marginL+50, marginT-8);
+
+  if (iact.eventsRun === 0) {
+    ctx.font = '11px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(200,220,240,0.6)';
+    ctx.fillText('Run events to build the alpha plot →', marginL, marginT+plotH/2);
+  } else {
+    ctx.font = '10px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(220,230,240,0.75)';
+    wrapText(ctx, 'A real gamma-ray source shows up as an ON excess concentrated at low alpha, with OFF staying flat — that excess is the detection.', marginL, marginT+plotH+30, plotW, 12);
+  }
+
+  ctx.restore();
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+//  STEREO (2-TELESCOPE) RECONSTRUCTION — the real fix for the single-
+//  telescope DISP sign ambiguity: two independent lines from two
+//  different ground positions intersect at (very nearly) one point,
+//  no head/tail guess required.
+// ═══════════════════════════════════════════════════════════════════
+function drawIACTStereo() {
+  const ctx = oc;
+  ctx.save();
+
+  const cx = imgW/2, cy = imgH/2 - 10;
+  const pxPerDeg = Math.min(imgW,imgH) * 0.13;
+
+  ctx.font = '11px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(230,240,250,0.85)';
+  ctx.fillText('Stereo reconstruction — shared sky view', 16, 24);
+
+  if (!iact.hillas) {
+    ctx.font = '12px "Share Tech Mono", monospace';
+    ctx.fillStyle = 'rgba(200,220,240,0.7)';
+    ctx.fillText('Fire a shower in Single Event view first, then come back here.', 16, imgH/2);
+    ctx.restore();
+    return;
+  }
+  if (iact.hillas.ptype === 'muon') {
+    ctx.font = '12px "Share Tech Mono", monospace';
+    ctx.fillStyle = 'rgba(200,220,240,0.7)';
+    ctx.fillText('Muon rings encode position directly (ring center) — stereo triangulation applies to shower ellipses.', 16, imgH/2);
+    ctx.restore();
+    return;
+  }
+
+  const h1 = iact.hillas;
+  const savedImpact = iact.impactM, savedSeed = iact.seed;
+  iact.impactM = iact.impactM2;
+  const h2 = iactComputeHillas();
+  iact.impactM = savedImpact; iact.seed = savedSeed;
+
+  // shared sky frame: center = assumed/true source position
+  ctx.beginPath(); ctx.arc(cx, cy, 2.9*pxPerDeg, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(150,180,210,0.25)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-6,cy); ctx.lineTo(cx+6,cy); ctx.moveTo(cx,cy-6); ctx.lineTo(cx,cy+6);
+  ctx.strokeStyle = 'rgba(255,220,120,0.7)'; ctx.lineWidth = 1.3; ctx.stroke();
+  ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(255,220,120,0.7)';
+  ctx.fillText('true source', cx+8, cy-2.9*pxPerDeg-6);
+
+  function telescopeLine(distanceDeg, azimuthRad, alphaDeg, jitterSign) {
+    const gx = distanceDeg*Math.cos(azimuthRad), gy = distanceDeg*Math.sin(azimuthRad);
+    const toCenterAngle = Math.atan2(-gy, -gx);
+    const axisAngle = toCenterAngle + jitterSign*(alphaDeg*Math.PI/180);
+    return { gx, gy, axisAngle };
+  }
+  const az2 = iact.tel2AngleDeg*Math.PI/180;
+  const t1 = telescopeLine(h1.distanceDeg, 0, h1.alphaDeg, iactRand()<0.5?1:-1);
+  const t2 = telescopeLine(h2.distanceDeg, az2, h2.alphaDeg, iactRand()<0.5?1:-1);
+
+  function drawTelLine(t, color, label) {
+    const cxp = cx+t.gx*pxPerDeg, cyp = cy+t.gy*pxPerDeg;
+    const len = 3.6*pxPerDeg;
+    ctx.beginPath();
+    ctx.moveTo(cxp-Math.cos(t.axisAngle)*len, cyp-Math.sin(t.axisAngle)*len);
+    ctx.lineTo(cxp+Math.cos(t.axisAngle)*len, cyp+Math.sin(t.axisAngle)*len);
+    ctx.strokeStyle = `rgba(${color},0.55)`; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cxp,cyp,4,0,Math.PI*2);
+    ctx.fillStyle = `rgba(${color},0.9)`; ctx.fill();
+    ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = `rgba(${color},0.8)`;
+    ctx.fillText(label, cxp+8, cyp-8);
+  }
+  drawTelLine(t1, '140,210,255', 'Telescope 1 image');
+  drawTelLine(t2, '255,180,120', 'Telescope 2 image');
+
+  // Line-line intersection (the stereo-reconstructed direction — no sign guess needed)
+  const d1x = Math.cos(t1.axisAngle), d1y = Math.sin(t1.axisAngle);
+  const d2x = Math.cos(t2.axisAngle), d2y = Math.sin(t2.axisAngle);
+  const denom = d1x*d2y - d1y*d2x;
+  let reconDeg = null;
+  if (Math.abs(denom) > 1e-6) {
+    const tt = ((t2.gx-t1.gx)*d2y - (t2.gy-t1.gy)*d2x) / denom;
+    const ix = t1.gx + tt*d1x, iy = t1.gy + tt*d1y;
+    reconDeg = Math.hypot(ix,iy);
+    const rx = cx+ix*pxPerDeg, ry = cy+iy*pxPerDeg;
+    ctx.beginPath(); ctx.arc(rx,ry,5,0,Math.PI*2);
+    ctx.fillStyle = 'rgba(140,255,190,0.95)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.font = '10px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(140,255,190,0.95)';
+    ctx.fillText('stereo reconstruction', rx+9, ry+3);
+  }
+
+  ctx.font = '11px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(220,230,240,0.85)';
+  ctx.fillText(`Telescope 1: α=${h1.alphaDeg.toFixed(1)}°, distance=${h1.distanceDeg.toFixed(2)}°`, 16, imgH-70);
+  ctx.fillText(`Telescope 2: α=${h2.alphaDeg.toFixed(1)}°, distance=${h2.distanceDeg.toFixed(2)}°`, 16, imgH-54);
+  if (reconDeg !== null) {
+    ctx.fillStyle = 'rgba(140,255,190,0.9)';
+    ctx.fillText(`Reconstruction error: ${reconDeg.toFixed(3)}° from true source`, 16, imgH-38);
+  }
+  ctx.fillStyle = 'rgba(200,220,240,0.65)';
+  wrapText(ctx, 'Two independent lines cross at essentially one point — no head/tail guess needed, unlike single-telescope DISP.', 16, imgH-18, imgW-32, 12);
+
+  ctx.restore();
+}
+
+
+function drawIACTAtmosphere(x0, y0, w, h) {
+  const ctx = oc;
+  ctx.save();
+  ctx.translate(x0, y0);
+  ctx.beginPath(); ctx.rect(0,0,w,h); ctx.clip();
+
+  const marginB = 30, topY = 24, groundY = h - marginB;
+  const hmax = iactHmax(iact.energyGeV);
+  const interactionExtra = 6;
+  const totalKm = hmax + interactionExtra;
+  const poolR = iactPoolRadius(iact.energyGeV);
+  const cx = w*0.42;
+  const pxPerM = (w*0.42) / Math.max(poolR*1.6, 140); // lateral scale so the pool + impact fit nicely
+  const showerPxWidth = w*0.34; // max lateral extent in px for the branching structure
+
+  function yOfFrac(f) { return topY + f*(groundY-topY); } // f=0 top (interaction) .. 1 ground
+
+  const driftM = iactGroundDriftM(iact.energyGeV, iact.attackDeg);
+  const driftPx = driftM*pxPerM;
+
+  // altitude gridlines
+  ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(160,185,210,0.5)';
+  for (let km = 0; km <= Math.ceil(totalKm); km += 5) {
+    const f = 1 - km/totalKm;
+    const y = yOfFrac(Math.max(0,Math.min(1,f)));
+    ctx.strokeStyle = 'rgba(140,170,200,0.12)'; ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+    ctx.fillText(km+' km', 4, y-3);
+  }
+
+  // ground + telescope
+  ctx.strokeStyle = 'rgba(160,190,210,0.4)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(w, groundY); ctx.stroke();
+  const telX = cx + iact.impactM*pxPerM;
+
+  // Faint, wide "instantaneous field of view" for context — the camera's full angular
+  // reach, pointed along the tracked (attack-angle) direction.
+  const fovHalfDeg = 2.6;
+  const fovSpread = Math.tan(fovHalfDeg*Math.PI/180) * (totalKm*1000) * pxPerM;
+  const topAxisX = telX - driftPx;
+  ctx.beginPath();
+  ctx.moveTo(telX, groundY);
+  ctx.lineTo(topAxisX - fovSpread, topY);
+  ctx.lineTo(topAxisX + fovSpread, topY);
+  ctx.closePath();
+  const fovGrad = ctx.createLinearGradient(telX, groundY, topAxisX, topY);
+  fovGrad.addColorStop(0, 'rgba(120,200,255,0.07)');
+  fovGrad.addColorStop(1, 'rgba(120,200,255,0.01)');
+  ctx.fillStyle = fovGrad; ctx.fill();
+  ctx.strokeStyle = 'rgba(140,210,255,0.18)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(140,210,255,0.4)';
+  ctx.fillText('camera FOV', Math.min(w-80, topAxisX + fovSpread - 55), topY + 14);
+
+  // The actual sightlines the telescope uses to image the shower: lines from the
+  // telescope to two representative points along the (tilted) shower axis. The ANGLE
+  // between these two lines is exactly what becomes the ellipse "length" in the camera —
+  // not a side-view photograph, but the angular sweep of the shower's altitude range as
+  // seen from this particular (off-axis) telescope position.
+  if (iact.ptype !== 'muon') {
+    const geo = iactSightlineGeometry();
+    const pTop = [cx + geo.yTop*driftPx, yOfFrac(geo.yTop)];
+    const pBot = [cx + geo.yBot*driftPx, yOfFrac(geo.yBot)];
+    ctx.strokeStyle = 'rgba(255,225,140,0.7)'; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(telX, groundY); ctx.lineTo(pTop[0], pTop[1]); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(telX, groundY); ctx.lineTo(pBot[0], pBot[1]); ctx.stroke();
+    ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(255,225,140,0.75)';
+    ctx.fillText(`sightline sweep → image length ${Math.abs(geo.angBot-geo.angTop).toFixed(2)}°`,
+      Math.min(w-190, telX+8), groundY-10);
+  }
+
+  ctx.save(); ctx.translate(telX, groundY);
+  ctx.strokeStyle = 'rgba(200,220,240,0.8)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-8,-14); ctx.lineTo(8,-14); ctx.closePath();
+  ctx.fillStyle = 'rgba(60,80,100,0.6)'; ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,-14); ctx.lineTo(0,-22); ctx.stroke();
+  ctx.fillStyle = 'rgba(200,220,240,0.7)'; ctx.font = '9px monospace';
+  ctx.fillText('IACT', -14, 14);
+  ctx.restore();
+
+  const t = iact.fireT, D = iact.fireDuration;
+  const tDescend0 = 0, tDescend1 = 0.13*D;
+  const tGrow0 = tDescend1, tGrow1 = 0.75*D;
+
+  const symbol = iact.ptype === 'gamma' ? 'γ' : (iact.ptype === 'muon' ? 'μ' : 'p');
+
+  // Incoming primary (descends vertically to the first-interaction point)
+  if (t < tDescend1 || iact.branches.length === 0) {
+    const f = Math.max(0, Math.min(1, (t-tDescend0)/(tDescend1-tDescend0)));
+    const y0v = topY - 40, y1v = yOfFrac(0);
+    const yNow = y0v + (y1v-y0v)*f;
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx, yNow-24); ctx.lineTo(cx, yNow); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, yNow, 3, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.font = '10px monospace'; ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillText(symbol, cx+8, yNow);
+  }
+
+  // Shower/track: reveal progressively as the growth-frontier descends, drifting
+  // sideways with depth if the primary came in at a non-zero attack angle.
+  const frontier = Math.max(0, Math.min(1, (t-tGrow0)/(tGrow1-tGrow0)));
+  const isMuon = iact.ptype === 'muon';
+  const ptypeColor = isMuon ? '210,225,255' : (iact.ptype === 'gamma' ? '150,210,255' : '255,180,120');
+  if (t >= tGrow0 && iact.branches.length) {
+    for (const b of iact.branches) {
+      if (b.y0 > frontier) continue;
+      const y1c = Math.min(b.y1, frontier);
+      const x0p = cx + b.x0*showerPxWidth + b.y0*driftPx, y0p = yOfFrac(b.y0);
+      const x1p = cx + b.x1*showerPxWidth + y1c*driftPx, y1p = yOfFrac(y1c);
+      if (isMuon) {
+        ctx.strokeStyle = `rgba(${ptypeColor},0.9)`; ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.moveTo(x0p,y0p); ctx.lineTo(x1p,y1p); ctx.stroke();
+        // thin Cherenkov sheath hugging the track
+        ctx.strokeStyle = 'rgba(140,190,255,0.15)'; ctx.lineWidth = 10;
+        ctx.beginPath(); ctx.moveTo(x0p,y0p); ctx.lineTo(x1p,y1p); ctx.stroke();
+      } else {
+        const alpha = 0.25 + 0.5*(1-b.gen/6);
+        ctx.strokeStyle = `rgba(${ptypeColor},${alpha.toFixed(3)})`;
+        ctx.lineWidth = Math.max(0.6, 2.2 - b.gen*0.3);
+        ctx.beginPath(); ctx.moveTo(x0p,y0p); ctx.lineTo(x1p,y1p); ctx.stroke();
+      }
+    }
+    for (const sub of iact.subshowers) {
+      for (const b of sub) {
+        if (b.y0 > frontier) continue;
+        const y1c = Math.min(b.y1, frontier);
+        const x0p = cx + b.x0*showerPxWidth + b.y0*driftPx, y0p = yOfFrac(b.y0);
+        const x1p = cx + b.x1*showerPxWidth + y1c*driftPx, y1p = yOfFrac(y1c);
+        ctx.strokeStyle = `rgba(255,150,150,0.35)`;
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x0p,y0p); ctx.lineTo(x1p,y1p); ctx.stroke();
+      }
+    }
+  }
+
+  // Cherenkov flash + light pool once the frontier passes shower max
+  const peakY = iact.peakY || 0.4;
+  const poolCenterX = cx + driftPx;
+  if (frontier > peakY*0.85) {
+    const flashProg = Math.max(0, Math.min(1, (frontier-peakY*0.85)/(1-peakY*0.85)));
+    const poolPxR = poolR*pxPerM;
+    const flashAlpha = 0.5*Math.sin(Math.PI*Math.min(1,flashProg*1.3))*(1-flashProg*0.3);
+    const coreX = cx + peakY*driftPx, coreY = yOfFrac(peakY);
+    const grad = ctx.createLinearGradient(coreX, coreY, poolCenterX, groundY);
+    grad.addColorStop(0, `rgba(140,190,255,${(flashAlpha*0.5).toFixed(3)})`);
+    grad.addColorStop(1, `rgba(140,190,255,0)`);
+    ctx.beginPath();
+    ctx.moveTo(coreX, coreY);
+    ctx.lineTo(poolCenterX-poolPxR, groundY);
+    ctx.lineTo(poolCenterX+poolPxR, groundY);
+    ctx.closePath();
+    ctx.fillStyle = grad; ctx.fill();
+    // ground light pool ellipse
+    ctx.beginPath(); ctx.ellipse(poolCenterX, groundY, poolPxR, poolPxR*0.18, 0, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(140,200,255,${(flashAlpha*0.35).toFixed(3)})`; ctx.fill();
+    ctx.strokeStyle = `rgba(160,210,255,${(flashAlpha*0.6).toFixed(3)})`; ctx.lineWidth=1; ctx.stroke();
+  }
+
+  ctx.font = '11px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(230,240,250,0.85)';
+  const label = iact.ptype === 'gamma' ? 'Gamma-ray primary' : (iact.ptype === 'muon' ? 'Muon primary (no cascade)' : 'Hadron (cosmic-ray) primary');
+  ctx.fillText(label, 12, 16);
+
+  ctx.restore();
+}
+
+function drawIACTCamera(x0, y0, w, h) {
+  const ctx = oc;
+  ctx.save();
+  ctx.translate(x0, y0);
+  ctx.beginPath(); ctx.rect(0,0,w,h); ctx.clip();
+
+  const cx = w/2, cy = h/2 - 10;
+  const pxPerDeg = Math.min(w,h) * 0.16;
+  const hexR = IACT_HEX_R_DEG * pxPerDeg;
+
+  ctx.font = '11px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(230,240,250,0.85)';
+  ctx.fillText('Camera image', 14, 20);
+
+  const t = iact.fireT, D = iact.fireDuration;
+  const revealStart = 0.75*D;
+  const revealAlpha = Math.max(0, Math.min(1, (t-revealStart)/(D-revealStart)));
+
+  let show = null;
+  if (iact.hillas) show = iact.hillas;
+  else if (revealAlpha > 0) show = iact.pendingHillas;
+
+  for (const px of IACT_CAMERA_PIXELS) {
+    const x = cx + px.x*pxPerDeg, y = cy + px.y*pxPerDeg;
+    let intensity = 0;
+    if (show && show.triggered) {
+      if (show.ptype === 'muon') {
+        const dx = px.x - show.distanceDeg, dy = px.y;
+        const dist = Math.hypot(dx,dy);
+        const ang = Math.atan2(dy,dx);
+        const arcOk = ((ang+Math.PI*2) % (Math.PI*2)) < show.completeness*Math.PI*2;
+        const sigma = 0.09;
+        intensity = arcOk ? Math.exp(-Math.pow(dist-show.ringRadiusDeg,2)/(2*sigma*sigma)) * revealAlpha : 0;
+      } else {
+        const a = show.alphaDeg*Math.PI/180;
+        const relx = px.x - show.distanceDeg, rely = px.y;
+        const u =  relx*Math.cos(a) + rely*Math.sin(a);
+        const v = -relx*Math.sin(a) + rely*Math.cos(a);
+        const L = Math.max(0.05, show.lengthDeg/2), W = Math.max(0.03, show.widthDeg/2);
+        intensity = Math.exp(-((u*u)/(2*L*L) + (v*v)/(2*W*W))) * revealAlpha;
+      }
+    }
+    const [r,g,b] = iactCameraColor(intensity);
+    iactHexPath(ctx, x, y, hexR*0.96);
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 0.5; ctx.stroke();
+  }
+  // camera boundary + center crosshair
+  ctx.beginPath(); ctx.arc(cx, cy, 2.6*pxPerDeg, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(150,180,210,0.3)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-6,cy); ctx.lineTo(cx+6,cy); ctx.moveTo(cx,cy-6); ctx.lineTo(cx,cy+6);
+  ctx.strokeStyle = 'rgba(200,220,240,0.4)'; ctx.lineWidth = 1; ctx.stroke();
+
+  // ── Wobble ON/OFF regions + accumulated landed events — the bridge from a single
+  // image to the population statistics view ──
+  if (iact.wobbleOn) {
+    const off = iact.wobbleOffsetDeg;
+    const regionAngles = [0, Math.PI/2, Math.PI, 3*Math.PI/2];
+    const regionNames = ['ON','OFF','OFF','OFF'];
+    const regionColors = ['140,255,190','255,180,120','255,180,120','255,180,120'];
+    for (let i = 0; i < 4; i++) {
+      const rx = cx + off*pxPerDeg*Math.cos(regionAngles[i]), ry = cy + off*pxPerDeg*Math.sin(regionAngles[i]);
+      const regionR = 0.35*pxPerDeg;
+      ctx.beginPath(); ctx.arc(rx, ry, regionR, 0, Math.PI*2);
+      ctx.setLineDash([3,3]);
+      ctx.strokeStyle = `rgba(${regionColors[i]},0.6)`; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = `rgba(${regionColors[i]},0.7)`;
+      ctx.fillText(regionNames[i], rx-8, ry-regionR-4);
+    }
+    for (const ev of iact.landedEvents) {
+      const az = ev.azimuthDeg*Math.PI/180;
+      const ex = cx + ev.distanceDeg*pxPerDeg*Math.cos(az), ey = cy + ev.distanceDeg*pxPerDeg*Math.sin(az);
+      const col = ev.classification === 'Gamma-like' ? '140,255,190' : (ev.classification.startsWith('Muon') ? '210,225,255' : '255,150,120');
+      ctx.beginPath(); ctx.arc(ex, ey, 2.4, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${col},0.8)`; ctx.fill();
+    }
+    if (iact.landedEvents.length) {
+      ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(200,220,240,0.6)';
+      ctx.fillText(`${iact.landedEvents.length} events landed so far`, cx-2.5*pxPerDeg, cy+2.9*pxPerDeg+30);
+    }
+  }
+
+  // ── Reconstruction overlay: how Hillas parameters actually locate the source ──
+  if (show && show.triggered && show.ptype !== 'muon' && revealAlpha > 0.5) {
+    const a = show.alphaDeg*Math.PI/180;
+    const centroidX = cx + show.distanceDeg*pxPerDeg, centroidY = cy;
+    const srcX = iact.wobbleOn ? cx + iact.wobbleOffsetDeg*pxPerDeg : cx;
+    const srcY = cy;
+
+    // Major axis, extended both directions across the camera (dotted — this line, not
+    // a single point, is all one telescope's image constrains on its own).
+    const lineLen = 3.4*pxPerDeg;
+    ctx.save();
+    ctx.setLineDash([4,4]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(centroidX-Math.cos(a)*lineLen, centroidY-Math.sin(a)*lineLen);
+    ctx.lineTo(centroidX+Math.cos(a)*lineLen, centroidY+Math.sin(a)*lineLen);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Assumed source test position (the wobble ON point, or camera center if not wobbling)
+    ctx.beginPath(); ctx.moveTo(srcX-7,srcY); ctx.lineTo(srcX+7,srcY); ctx.moveTo(srcX,srcY-7); ctx.lineTo(srcX,srcY+7);
+    ctx.strokeStyle = 'rgba(255,220,120,0.9)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(srcX,srcY,9,0,Math.PI*2); ctx.strokeStyle = 'rgba(255,220,120,0.6)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(255,220,120,0.8)';
+    ctx.fillText('assumed source', srcX+10, srcY-10);
+
+    // Line from image centroid to the assumed source, and the alpha angle between it
+    // and the major axis — this angle is literally the "alpha" readout.
+    ctx.beginPath(); ctx.moveTo(centroidX,centroidY); ctx.lineTo(srcX,srcY);
+    ctx.strokeStyle = 'rgba(150,220,255,0.5)'; ctx.lineWidth = 1; ctx.stroke();
+
+    const toSourceAngle = Math.atan2(srcY-centroidY, srcX-centroidX);
+    let axisAngleTrue = a;
+    const diff1 = Math.abs(((a-toSourceAngle+Math.PI)%(2*Math.PI))-Math.PI);
+    const diff2 = Math.abs(((a+Math.PI-toSourceAngle+Math.PI)%(2*Math.PI))-Math.PI);
+    if (diff2 < diff1) axisAngleTrue = a+Math.PI;
+    const arcR = 22;
+    ctx.beginPath();
+    ctx.arc(centroidX, centroidY, arcR, Math.min(axisAngleTrue,toSourceAngle), Math.max(axisAngleTrue,toSourceAngle));
+    ctx.strokeStyle = 'rgba(255,180,120,0.85)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,180,120,0.95)'; ctx.font = '10px "Share Tech Mono", monospace';
+    ctx.fillText(`α=${show.alphaDeg.toFixed(1)}°`,
+      centroidX+arcR*1.5*Math.cos((axisAngleTrue+toSourceAngle)/2), centroidY+arcR*1.5*Math.sin((axisAngleTrue+toSourceAngle)/2));
+
+    // DISP-style single-telescope position estimate. The magnitude (how far along the
+    // axis) comes from the image's elongation/asymmetry; the SIDE (head vs tail) comes
+    // from a sign classifier that, like FACT's real disp reconstruction, is imperfect —
+    // roughly 82% accurate for genuine gammas, coin-flip for hadrons — so this marker
+    // will visibly land on the wrong side of the centroid some of the time.
+    const dispDeg = Math.max(0, 1 - show.widthDeg/show.lengthDeg) * show.lengthDeg*0.5;
+    const axisAngleRecon = show.dispSignCorrect ? axisAngleTrue : axisAngleTrue + Math.PI;
+    const reconX = centroidX + Math.cos(axisAngleRecon)*dispDeg*pxPerDeg;
+    const reconY = centroidY + Math.sin(axisAngleRecon)*dispDeg*pxPerDeg;
+    ctx.beginPath(); ctx.arc(reconX,reconY,4,0,Math.PI*2);
+    ctx.fillStyle = show.dispSignCorrect ? 'rgba(140,255,190,0.9)' : 'rgba(255,140,140,0.9)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.font = '9px "Share Tech Mono", monospace';
+    ctx.fillStyle = show.dispSignCorrect ? 'rgba(140,255,190,0.9)' : 'rgba(255,140,140,0.9)';
+    ctx.fillText(show.dispSignCorrect ? 'reconstructed (DISP)' : 'reconstructed (DISP, wrong side)', reconX+8, reconY+3);
+  }
+
+  if (!iact.firing && !iact.hillas) {
+    ctx.font = '11px "Share Tech Mono", monospace';
+    ctx.fillStyle = 'rgba(180,200,220,0.6)';
+    ctx.fillText('Fire Shower to trigger', cx-70, cy+2.9*pxPerDeg+16);
+  } else if (show && !show.triggered && revealAlpha > 0.3) {
+    ctx.font = '11px "Share Tech Mono", monospace';
+    ctx.fillStyle = 'rgba(255,160,140,0.85)';
+    ctx.fillText('NO TRIGGER — outside light pool', cx-90, cy+2.9*pxPerDeg+16);
+  } else if (show && show.triggered && revealAlpha > 0.5) {
+    ctx.font = '11px "Share Tech Mono", monospace';
+    ctx.fillStyle = 'rgba(150,255,190,0.85)';
+    ctx.fillText(show.ptype === 'muon' ? 'MUON RING' : 'TRIGGERED', cx-32, cy+2.9*pxPerDeg+16);
+  }
+
+  ctx.restore();
 }
 
 
@@ -1881,6 +4345,21 @@ function loop() {
   if (state.mode === 'agn') {
     if (!state.paused) updateAGN(0.04 * state.timeScale);
     drawAGN();
+  } else if (state.mode === 'hr') {
+    if (!state.paused) updateHR(0.04 * state.timeScale);
+    drawHR();
+  } else if (state.mode === 'rotation') {
+    if (!state.paused) updateRotation(0.04 * state.timeScale);
+    drawRotation();
+  } else if (state.mode === 'sed') {
+    if (!state.paused) updateSED(0.04 * state.timeScale);
+    drawSED();
+  } else if (state.mode === 'pulsar') {
+    if (!state.paused) updatePulsar(0.04 * state.timeScale);
+    drawPulsar();
+  } else if (state.mode === 'iact') {
+    if (!state.paused) updateIACT(0.04 * state.timeScale);
+    drawIACT();
   } else {
     if (!state.paused) {
       state.time += 0.04 * state.timeScale;
@@ -1898,8 +4377,9 @@ function loop() {
   const now = performance.now();
   if (now - lastFpsTime > 500) {
     const fps = (frameCount / ((now - lastFpsTime) / 1000)).toFixed(0);
-    document.getElementById('fps-display').textContent = state.mode === 'agn'
-      ? `${fps} fps · spine-sheath model`
+    const modeLabel = { agn: 'spine-sheath model', hr: 'HR diagram', rotation: 'rotation curve' }[state.mode];
+    document.getElementById('fps-display').textContent = modeLabel
+      ? `${fps} fps · ${modeLabel}`
       : `${fps} fps · ${GRID}² · ${USE_WEBGL ? 'GPU' : 'CPU'}`;
     frameCount = 0;
     lastFpsTime = now;
@@ -1940,7 +4420,45 @@ wireSlider('sl-agn-theta',   'sv-agn-theta',   ()=>50,  v=>{agn.thetaDeg=v/10; u
 wireSlider('sl-agn-gspine',  'sv-agn-gspine',  ()=>150, v=>{agn.gammaSpine=v/10; updateAGNReadouts();},      v=>(v/10).toFixed(1));
 wireSlider('sl-agn-gsheath', 'sv-agn-gsheath', ()=>30,  v=>{agn.gammaSheath=v/10; updateAGNReadouts();},     v=>(v/10).toFixed(1));
 wireSlider('sl-agn-ambient', 'sv-agn-ambient', ()=>100, v=>{agn.ambientDensity=v/100;},                      v=>(v/100).toFixed(2));
-wireSlider('sl-agn-alpha',   'sv-agn-alpha',   ()=>100, v=>{agn.alpha=v/100; updateAGNReadouts();},          v=>(v/100).toFixed(2));
+
+wireSlider('sl-hr-mass', 'sv-hr-mass', ()=>0,  v=>{ hr.mass=Math.pow(10,v/100); hr.trail=[]; updateHRReadouts(); }, v=>Math.pow(10,v/100).toFixed(2));
+wireSlider('sl-hr-age',  'sv-hr-age',  ()=>0,  v=>{ hr.age=v/100; updateHRReadouts(); },                           v=>(v/100).toFixed(2));
+
+wireSlider('sl-rot-diskmass','sv-rot-diskmass', ()=>60, v=>{rot.diskMass=v/10;},   v=>(v/10).toFixed(1)+'×10¹⁰ M☉');
+wireSlider('sl-rot-scale',   'sv-rot-scale',    ()=>30, v=>{rot.diskScale=v/10;},  v=>(v/10).toFixed(1)+' kpc');
+wireSlider('sl-rot-vinf',    'sv-rot-vinf',     ()=>180,v=>{rot.vInf=v;},          v=>`${v} km/s`);
+wireSlider('sl-rot-core',    'sv-rot-core',     ()=>30, v=>{rot.coreRadius=v/10;}, v=>(v/10).toFixed(1)+' kpc');
+wireSlider('sl-rot-tilt',    'sv-rot-tilt',     ()=>55, v=>{rot.tilt=v;},          v=>`${v}°`);
+
+function sedFmtGamma(v) {
+  const g = Math.pow(10, v/100);
+  const exp = Math.floor(Math.log10(g));
+  const mant = g/Math.pow(10,exp);
+  return `${mant.toFixed(1)}×10${('⁰¹²³⁴⁵⁶⁷⁸⁹'[exp]||exp)}`;
+}
+wireSlider('sl-sed-gamma',   'sv-sed-gamma',   ()=>400, v=>{sed.gammaPeak=Math.pow(10,v/100); updateSEDReadouts();}, sedFmtGamma);
+wireSlider('sl-sed-p',       'sv-sed-p',       ()=>25,  v=>{sed.p=v/10; updateSEDReadouts();},                     v=>(v/10).toFixed(1));
+wireSlider('sl-sed-bfield',  'sv-sed-bfield',  ()=>-100,v=>{sed.bField=Math.pow(10,v/100); updateSEDReadouts();},  v=>Math.pow(10,v/100).toFixed(2)+' G');
+wireSlider('sl-sed-delta',   'sv-sed-delta',   ()=>15,  v=>{sed.delta=v; updateSEDReadouts();},                    v=>`${v}`);
+wireSlider('sl-sed-compton', 'sv-sed-compton', ()=>0,   v=>{sed.comptonDominance=Math.pow(10,v/100); updateSEDReadouts();}, v=>Math.pow(10,v/100).toFixed(2));
+
+function psrFmtB(v) {
+  const B = Math.pow(10, v/100);
+  const exp = Math.floor(Math.log10(B));
+  const mant = B/Math.pow(10,exp);
+  return `${mant.toFixed(1)}×10${('⁰¹²³⁴⁵⁶⁷⁸⁹'[exp]||exp)} G`;
+}
+wireSlider('sl-psr-p0',  'sv-psr-p0',  ()=>130, v=>{ psr.P0=Math.pow(10,v/100)/1000; psr.trail=[]; updatePulsarReadouts(); }, v=>Math.round(Math.pow(10,v/100))+' ms');
+wireSlider('sl-psr-b',   'sv-psr-b',   ()=>1200,v=>{ psr.B=Math.pow(10,v/100); psr.trail=[]; updatePulsarReadouts(); },        psrFmtB);
+wireSlider('sl-psr-age', 'sv-psr-age', ()=>0,   v=>{ psr.ageYears=Math.pow(10,v/100); updatePulsarReadouts(); },              v=>Math.pow(10,v/100).toExponential(1));
+
+function iactFmtEnergy(v) {
+  const E = Math.pow(10, v/100);
+  return E >= 1000 ? (E/1000).toFixed(2)+' TeV' : Math.round(E)+' GeV';
+}
+wireSlider('sl-iact-energy', 'sv-iact-energy', ()=>250, v=>{ iact.energyGeV=Math.pow(10,v/100); updateIACTReadouts(); }, iactFmtEnergy);
+wireSlider('sl-iact-impact', 'sv-iact-impact', ()=>60,  v=>{ iact.impactM=v; updateIACTReadouts(); },                     v=>`${v} m`);
+wireSlider('sl-iact-attack', 'sv-iact-attack', ()=>0,   v=>{ iact.attackDeg=v; updateIACTReadouts(); },                   v=>`${v}°`);
 
 (function() {
   const sl = document.getElementById('sl-resolution');
@@ -1969,30 +4487,55 @@ function wireRadioGroup(name, onchange) {
 wireRadioGroup('light', val => { state.lightType = val; });
 wireRadioGroup('speed', val => { state.timeScale = parseFloat(val); });
 
-document.getElementById('btn-mode-water').addEventListener('click', function() {
-  if (state.mode === 'water') return;
-  state.mode = 'water';
-  this.classList.add('active');
-  document.getElementById('btn-mode-agn').classList.remove('active');
-  document.getElementById('panel-water').style.display = '';
-  document.getElementById('panel-agn').style.display = 'none';
-  document.getElementById('canvas-title-text').textContent = '◈ Water Reflection Simulator';
-  document.getElementById('hint').textContent =
-    'L-click: ripple | R-drag: draw wall/emitter | Jet mode: R-drag to aim & place a hose | Drag ●: move light | Tilt/Az: 3D camera';
-});
+const MODES = {
+  water: {
+    title: '◈ Water Reflection Simulator',
+    hint: 'L-click: ripple | R-drag: draw wall/emitter | Jet mode: R-drag to aim & place a hose | Drag ●: move light | Tilt/Az: 3D camera',
+  },
+  agn: {
+    title: '◈ AGN Jet — Spine / Sheath Model',
+    hint: 'Side-on view: fast inner spine + slower surrounding sheath, launched from the central engine into the ambient medium | Viewing θ sets the Doppler boost',
+  },
+  hr: {
+    title: '◈ Stellar Evolution — HR Diagram',
+    hint: 'Set a mass, then scrub or play through age to watch the star move across the diagram — main sequence, giant branch, and its final remnant',
+  },
+  rotation: {
+    title: '◈ Galaxy Rotation Curve',
+    hint: 'Visible matter alone predicts a falling (Keplerian) curve at large radius — the dark matter halo is what keeps it flat',
+  },
+  sed: {
+    title: '◈ Blazar Spectral Energy Distribution',
+    hint: 'The classic two-hump blazar SED: synchrotron (electrons in the B-field) and inverse-Compton (the same electrons up-scattering their own photons)',
+  },
+  pulsar: {
+    title: '◈ Pulsar P–Ṗ Diagram',
+    hint: 'Set a birth period and magnetic field, then play through age — the pulsar spins down along a track of constant B, crossing populations and eventually the death line',
+  },
+  iact: {
+    title: '◈ IACT Gamma-Ray Air Shower',
+    hint: 'Fire Shower to watch a primary particle strike the atmosphere, cascade into an air shower, and flash Cherenkov light onto the telescope — with the resulting camera image on the right',
+  },
+};
 
-document.getElementById('btn-mode-agn').addEventListener('click', function() {
-  if (state.mode === 'agn') return;
-  state.mode = 'agn';
-  this.classList.add('active');
-  document.getElementById('btn-mode-water').classList.remove('active');
-  document.getElementById('panel-water').style.display = 'none';
-  document.getElementById('panel-agn').style.display = '';
-  document.getElementById('canvas-title-text').textContent = '◈ AGN Jet — Spine / Sheath Model';
-  document.getElementById('hint').textContent =
-    'Side-on view: fast inner spine + slower surrounding sheath, launched from the central engine into the ambient medium | Viewing θ sets the Doppler boost';
-  updateAGNReadouts();
-});
+function setMode(m) {
+  if (state.mode === m) return;
+  state.mode = m;
+  document.getElementById('mode-select').value = m;
+  for (const k of Object.keys(MODES)) {
+    const p = document.getElementById('panel-' + k);
+    if (p) p.style.display = (k === m) ? '' : 'none';
+  }
+  document.getElementById('canvas-title-text').textContent = MODES[m].title;
+  document.getElementById('hint').textContent = MODES[m].hint;
+  if (m === 'agn') updateAGNReadouts();
+  if (m === 'hr') updateHRReadouts();
+  if (m === 'sed') updateSEDReadouts();
+  if (m === 'pulsar') updatePulsarReadouts();
+  if (m === 'iact') updateIACTReadouts();
+}
+
+document.getElementById('mode-select').addEventListener('change', e => setMode(e.target.value));
 
 document.getElementById('btn-waves').addEventListener('click', function() {
   state.bgWaves = !state.bgWaves;
@@ -2008,6 +4551,31 @@ document.getElementById('btn-pause').addEventListener('click', function() {
   agnBtn.textContent = state.paused ? 'Resume' : 'Pause';
   agnBtn.classList.toggle('active', state.paused);
 });
+
+const AGN_VIEW_BTNS = ['profile', 'sky', 'particles'];
+function setAGNView(v) {
+  agn.view = v;
+  for (const k of AGN_VIEW_BTNS) {
+    document.getElementById('btn-agn-view-' + k).classList.toggle('active', k === v);
+  }
+  document.getElementById('agn-particle-section').style.display = (v === 'particles') ? '' : 'none';
+}
+document.getElementById('btn-agn-view-profile').addEventListener('click', () => setAGNView('profile'));
+document.getElementById('btn-agn-view-sky').addEventListener('click', () => setAGNView('sky'));
+document.getElementById('btn-agn-view-particles').addEventListener('click', () => { setAGNView('particles'); updateAGNProcessCaption(); });
+
+const AGN_PROCESS_ORDER = ['synchrotron', 'ssc', 'pgamma', 'pp'];
+function updateAGNProcessCaption() {
+  const p = AGN_PROCESSES[agn.process];
+  document.getElementById('btn-agn-process').textContent = 'Process: ' + p.label;
+  document.getElementById('agn-process-caption').textContent = p.caption;
+}
+document.getElementById('btn-agn-process').addEventListener('click', function() {
+  const i = AGN_PROCESS_ORDER.indexOf(agn.process);
+  agn.process = AGN_PROCESS_ORDER[(i+1) % AGN_PROCESS_ORDER.length];
+  updateAGNProcessCaption();
+});
+updateAGNProcessCaption();
 
 document.getElementById('btn-agn-pause').addEventListener('click', function() {
   state.paused = !state.paused;
@@ -2026,7 +4594,9 @@ document.getElementById('btn-agn-sweep').addEventListener('click', function() {
 
 document.getElementById('btn-agn-reset').addEventListener('click', () => {
   agn.thetaDeg = 5.0; agn.gammaSpine = 15.0; agn.gammaSheath = 3.0;
-  agn.ambientDensity = 1.0; agn.alpha = 1.0; agn.sweep = false; agn.time = 0;
+  agn.ambientDensity = 1.0; agn.sweep = false; agn.time = 0; agn.view = 'profile';
+  setAGNView('profile');
+  agn.process = 'synchrotron'; updateAGNProcessCaption();
   document.getElementById('sl-agn-theta').value = 50;
   document.getElementById('sv-agn-theta').textContent = '5.0°';
   document.getElementById('sl-agn-gspine').value = 150;
@@ -2035,12 +4605,170 @@ document.getElementById('btn-agn-reset').addEventListener('click', () => {
   document.getElementById('sv-agn-gsheath').textContent = '3.0';
   document.getElementById('sl-agn-ambient').value = 100;
   document.getElementById('sv-agn-ambient').textContent = '1.00';
-  document.getElementById('sl-agn-alpha').value = 100;
-  document.getElementById('sv-agn-alpha').textContent = '1.00';
   const sweepBtn = document.getElementById('btn-agn-sweep');
   sweepBtn.textContent = 'Sweep θ: OFF';
   sweepBtn.classList.remove('active');
   updateAGNReadouts();
+});
+
+document.getElementById('btn-hr-play').addEventListener('click', function() {
+  hr.playing = !hr.playing;
+  this.textContent = hr.playing ? 'Pause Evolution' : 'Play Evolution';
+});
+
+document.getElementById('btn-hr-reset').addEventListener('click', () => {
+  hr.mass = 1.0; hr.age = 0.0; hr.playing = false; hr.trail = [];
+  document.getElementById('sl-hr-mass').value = 0;
+  document.getElementById('sv-hr-mass').textContent = '1.00';
+  document.getElementById('sl-hr-age').value = 0;
+  document.getElementById('sv-hr-age').textContent = '0.00';
+  document.getElementById('btn-hr-play').textContent = 'Play Evolution';
+  updateHRReadouts();
+});
+
+document.getElementById('btn-rot-halo').addEventListener('click', function() {
+  rot.haloOn = !rot.haloOn;
+  this.textContent = rot.haloOn ? 'Halo: ON' : 'Halo: OFF';
+  this.classList.toggle('active', rot.haloOn);
+});
+
+document.getElementById('btn-rot-reset').addEventListener('click', () => {
+  rot.diskMass = 6.0; rot.diskScale = 3.0; rot.vInf = 180; rot.coreRadius = 3.0; rot.haloOn = true; rot.tilt = 55;
+  document.getElementById('sl-rot-diskmass').value = 60;
+  document.getElementById('sv-rot-diskmass').textContent = '6.0×10¹⁰ M☉';
+  document.getElementById('sl-rot-scale').value = 30;
+  document.getElementById('sv-rot-scale').textContent = '3.0 kpc';
+  document.getElementById('sl-rot-vinf').value = 180;
+  document.getElementById('sv-rot-vinf').textContent = '180 km/s';
+  document.getElementById('sl-rot-core').value = 30;
+  document.getElementById('sv-rot-core').textContent = '3.0 kpc';
+  document.getElementById('sl-rot-tilt').value = 55;
+  document.getElementById('sv-rot-tilt').textContent = '55°';
+  const haloBtn = document.getElementById('btn-rot-halo');
+  haloBtn.textContent = 'Halo: ON'; haloBtn.classList.add('active');
+  rot.time = 0;
+  rotRegenParticles();
+});
+
+document.getElementById('btn-sed-reset').addEventListener('click', () => {
+  sed.gammaPeak = 1e4; sed.p = 2.5; sed.bField = 0.1; sed.delta = 15; sed.comptonDominance = 1.0;
+  document.getElementById('sl-sed-gamma').value = 400;
+  document.getElementById('sv-sed-gamma').textContent = sedFmtGamma(400);
+  document.getElementById('sl-sed-p').value = 25;
+  document.getElementById('sv-sed-p').textContent = '2.5';
+  document.getElementById('sl-sed-bfield').value = -100;
+  document.getElementById('sv-sed-bfield').textContent = '0.10 G';
+  document.getElementById('sl-sed-delta').value = 15;
+  document.getElementById('sv-sed-delta').textContent = '15';
+  document.getElementById('sl-sed-compton').value = 0;
+  document.getElementById('sv-sed-compton').textContent = '1.00';
+  sed.flarePlaying = false; sed.flareT = 0; sed.lightcurve = [];
+  document.getElementById('btn-sed-flare').textContent = 'Play Flare';
+  updateSEDReadouts();
+});
+
+document.getElementById('btn-sed-flare').addEventListener('click', function() {
+  sed.flarePlaying = true;
+  sed.flareT = 0;
+  sed.lightcurve = [];
+  this.textContent = 'Flaring…';
+});
+
+document.getElementById('btn-psr-play').addEventListener('click', function() {
+  psr.playing = !psr.playing;
+  this.textContent = psr.playing ? 'Pause Evolution' : 'Play Evolution';
+});
+
+document.getElementById('btn-psr-reset').addEventListener('click', () => {
+  psr.P0 = 0.02; psr.B = 1e12; psr.ageYears = 1; psr.playing = false; psr.trail = [];
+  document.getElementById('sl-psr-p0').value = 130;
+  document.getElementById('sv-psr-p0').textContent = '20 ms';
+  document.getElementById('sl-psr-b').value = 1200;
+  document.getElementById('sv-psr-b').textContent = psrFmtB(1200);
+  document.getElementById('sl-psr-age').value = 0;
+  document.getElementById('sv-psr-age').textContent = '1.0e+0';
+  document.getElementById('btn-psr-play').textContent = 'Play Evolution';
+  updatePulsarReadouts();
+});
+
+const IACT_PTYPE_ORDER = ['gamma', 'hadron', 'muon'];
+const IACT_PTYPE_LABEL = { gamma: 'Gamma ray', hadron: 'Hadron (cosmic ray)', muon: 'Muon' };
+document.getElementById('btn-iact-ptype').addEventListener('click', function() {
+  const i = IACT_PTYPE_ORDER.indexOf(iact.ptype);
+  iact.ptype = IACT_PTYPE_ORDER[(i+1) % IACT_PTYPE_ORDER.length];
+  this.textContent = 'Type: ' + IACT_PTYPE_LABEL[iact.ptype];
+});
+
+document.getElementById('btn-iact-fire').addEventListener('click', function() {
+  iact.firing = true;
+  iact.fireT = 0;
+  iact.hillas = null;
+  iact.seed = Math.floor(Math.random()*1e9);
+  iactGenerateBranches();
+  iact.pendingHillas = iactComputeHillas();
+  this.textContent = 'Firing…';
+  updateIACTReadouts();
+});
+
+document.getElementById('btn-iact-fire5').addEventListener('click', () => {
+  if (iact.firing || iact.queueRemaining > 0) return;
+  iact.queueRemaining = 5;
+  iactStartNextQueuedFire();
+});
+
+document.getElementById('btn-iact-reset').addEventListener('click', () => {
+  iact.energyGeV = 300; iact.impactM = 60; iact.attackDeg = 0; iact.ptype = 'gamma';
+  iact.firing = false; iact.fireT = 0; iact.hillas = null; iact.branches = []; iact.subshowers = [];
+  iact.landedEvents = []; iact.queueRemaining = 0;
+  document.getElementById('sl-iact-energy').value = 250;
+  document.getElementById('sv-iact-energy').textContent = iactFmtEnergy(250);
+  document.getElementById('sl-iact-impact').value = 60;
+  document.getElementById('sv-iact-impact').textContent = '60 m';
+  document.getElementById('sl-iact-attack').value = 0;
+  document.getElementById('sv-iact-attack').textContent = '0°';
+  document.getElementById('btn-iact-ptype').textContent = 'Type: Gamma ray';
+  document.getElementById('btn-iact-fire').textContent = 'Fire Shower';
+  updateIACTReadouts();
+});
+
+const IACT_SINGLE_PANELS = ['iact-single-controls','iact-single-controls2','iact-single-controls3','iact-hillas-section','iact-single-controls4'];
+const IACT_WOBBLE_PANELS = ['iact-wobble-controls','iact-wobble-readout','iact-wobble-controls2'];
+const IACT_STEREO_PANELS = ['iact-stereo-controls'];
+function setIACTView(v) {
+  iact.view = v;
+  document.getElementById('btn-iact-view-single').classList.toggle('active', v==='single');
+  document.getElementById('btn-iact-view-wobble').classList.toggle('active', v==='wobble');
+  document.getElementById('btn-iact-view-stereo').classList.toggle('active', v==='stereo');
+  for (const id of IACT_SINGLE_PANELS) document.getElementById(id).style.display = (v==='single') ? '' : 'none';
+  for (const id of IACT_WOBBLE_PANELS) document.getElementById(id).style.display = (v==='wobble') ? '' : 'none';
+  for (const id of IACT_STEREO_PANELS) document.getElementById(id).style.display = (v==='stereo') ? '' : 'none';
+  if (v==='single' && iact.hillas) document.getElementById('iact-hillas-section').style.display = '';
+  else if (v==='single') document.getElementById('iact-hillas-section').style.display = 'none';
+  if (v==='wobble') updateWobbleReadouts();
+}
+document.getElementById('btn-iact-view-single').addEventListener('click', () => setIACTView('single'));
+document.getElementById('btn-iact-view-wobble').addEventListener('click', () => setIACTView('wobble'));
+document.getElementById('btn-iact-view-stereo').addEventListener('click', () => setIACTView('stereo'));
+
+wireSlider('sl-iact-impact2',  'sv-iact-impact2',  ()=>90, v=>{ iact.impactM2=v; },    v=>`${v} m`);
+wireSlider('sl-iact-tel2angle','sv-iact-tel2angle',()=>90, v=>{ iact.tel2AngleDeg=v; }, v=>`${v}°`);
+
+document.getElementById('btn-iact-wobble').addEventListener('click', function() {
+  iact.wobbleOn = !iact.wobbleOn;
+  this.textContent = 'Wobble: ' + (iact.wobbleOn ? 'ON' : 'OFF');
+  this.classList.toggle('active', iact.wobbleOn);
+});
+
+wireSlider('sl-iact-woboffset', 'sv-iact-woboffset', ()=>40, v=>{ iact.wobbleOffsetDeg=v/100; }, v=>(v/100).toFixed(2)+'°');
+wireSlider('sl-iact-signalfrac', 'sv-iact-signalfrac', ()=>12, v=>{ iact.signalFraction=v/100; }, v=>`${v}%`);
+
+document.getElementById('btn-wob-run200').addEventListener('click', () => { iactRunEvents(200); updateWobbleReadouts(); });
+document.getElementById('btn-wob-run2000').addEventListener('click', () => { iactRunEvents(2000); updateWobbleReadouts(); });
+document.getElementById('btn-wob-reset').addEventListener('click', () => {
+  iact.alphaHistOn = new Array(9).fill(0);
+  iact.alphaHistOff = new Array(9).fill(0);
+  iact.eventsRun = 0;
+  updateWobbleReadouts();
 });
 
 document.getElementById('btn-edges').addEventListener('click', function() {
