@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Water Reflection Simulator</title>
+<meta name="description" content="Interactive physics &amp; astrophysics simulator: water waves, AGN relativistic jets, stellar evolution (HR diagram), galaxy rotation curves, blazar SEDs, pulsar P-Pdot diagrams, and IACT gamma-ray air showers with stereoscopic reconstruction.">
+<title>Physics &amp; Astrophysics Simulator — Water, Jets, Stars, Galaxies, Gamma Rays</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600&display=swap');
 
@@ -663,7 +664,6 @@
       <div class="btn-grid">
         <button id="btn-iact-view-single" class="active">Single Event</button>
         <button id="btn-iact-view-wobble">Wobble Stats</button>
-        <button id="btn-iact-view-stereo" style="grid-column:1/-1">Stereo (2 Telescopes)</button>
       </div>
     </div>
     <div class="panel-section" id="iact-single-controls">
@@ -680,10 +680,15 @@
       </div>
       <div class="btn-grid">
         <button id="btn-iact-ptype" style="grid-column:1/-1">Type: Gamma ray</button>
+        <button id="btn-iact-origin" style="grid-column:1/-1">Fire from: ON source</button>
       </div>
     </div>
     <div class="panel-section" id="iact-single-controls2">
       <div class="section-title">Telescope</div>
+      <div class="btn-grid">
+        <button id="btn-iact-ntel1" class="active">1 Telescope</button>
+        <button id="btn-iact-ntel2">2 Telescopes</button>
+      </div>
       <div class="slider-row">
         <span class="slider-label">Impact distance</span>
         <input type="range" id="sl-iact-impact" min="0" max="200" value="60" step="5">
@@ -708,6 +713,13 @@
       <div class="readout-row"><span id="lbl-iact-alpha">Alpha</span><span id="ro-iact-alpha">–</span></div>
       <div class="readout-row"><span>Classification</span><span id="ro-iact-classify">–</span></div>
     </div>
+    <div class="panel-section" id="iact-cuts-section" style="display:none">
+      <div class="section-title">Supercuts (box cuts)</div>
+      <div class="readout-row"><span>Width cut</span><span id="ro-cut-width">–</span></div>
+      <div class="readout-row"><span>Length cut</span><span id="ro-cut-length">–</span></div>
+      <div class="readout-row"><span>Distance cut</span><span id="ro-cut-distance">–</span></div>
+      <div class="readout-row"><span>θ² cut</span><span id="ro-cut-theta2">–</span></div>
+    </div>
     <div class="panel-section" id="iact-single-controls4">
       <div class="section-title">Controls</div>
       <div class="btn-grid">
@@ -731,10 +743,10 @@
       </div>
     </div>
     <div class="panel-section" id="iact-wobble-readout" style="display:none">
-      <div class="section-title">Alpha-Plot Readout</div>
+      <div class="section-title">θ²-Plot Readout</div>
       <div class="readout-row"><span>Events simulated</span><span id="ro-wob-events">0</span></div>
-      <div class="readout-row"><span>ON (α&lt;20°)</span><span id="ro-wob-on">0</span></div>
-      <div class="readout-row"><span>OFF (α&lt;20°, norm.)</span><span id="ro-wob-off">0</span></div>
+      <div class="readout-row"><span>ON (θ²&lt;0.11°²)</span><span id="ro-wob-on">0</span></div>
+      <div class="readout-row"><span>OFF (θ²&lt;0.11°², norm.)</span><span id="ro-wob-off">0</span></div>
       <div class="readout-row"><span>Excess</span><span id="ro-wob-excess">0</span></div>
       <div class="readout-row"><span>Excess/√OFF (illustrative)</span><span id="ro-wob-sig">–</span></div>
     </div>
@@ -747,10 +759,10 @@
       </div>
     </div>
 
-    <div class="panel-section" id="iact-stereo-controls" style="display:none">
+    <div class="panel-section" id="iact-tel2-controls" style="display:none">
       <div class="section-title">Telescope 2</div>
       <div style="font-size:9.5px; color:var(--label); line-height:1.4; margin-bottom:6px;">
-        Fire a shower in Single Event view first — Stereo shows that same shower as seen by a second telescope at a different ground position.
+        A second telescope at its own impact distance and ground azimuth around the shower core. Both images are plotted in one shared camera plane on the right; each ellipse's major axis is extended into a full line, and where the two lines cross is the stereo-reconstructed direction — no left/right guessing needed, unlike a single telescope.
       </div>
       <div class="slider-row">
         <span class="slider-label">Tel. 2 impact</span>
@@ -758,9 +770,9 @@
         <span class="slider-val" id="sv-iact-impact2">90 m</span>
       </div>
       <div class="slider-row">
-        <span class="slider-label">Tel. 2 position angle</span>
-        <input type="range" id="sl-iact-tel2angle" min="20" max="160" value="90" step="5">
-        <span class="slider-val" id="sv-iact-tel2angle">90°</span>
+        <span class="slider-label">Tel. 2 azimuth</span>
+        <input type="range" id="sl-iact-tel2az" min="20" max="160" value="70" step="5">
+        <span class="slider-val" id="sv-iact-tel2az">70°</span>
       </div>
     </div>
   </div><!-- /panel-iact -->
@@ -1049,7 +1061,7 @@ const iact = {
   view: 'single', wobbleOn: false, wobbleOffsetDeg: 0.4,
   signalFraction: 0.12, alphaHistOn: new Array(9).fill(0), alphaHistOff: new Array(9).fill(0),
   eventsRun: 0, landedEvents: [], queueRemaining: 0,
-  impactM2: 90, tel2AngleDeg: 90,
+  impactM2: 90, stereoCache: null, fireOrigin: 'on', nTel: 1, tel2AzimuthDeg: 70,
 };
 
 // Where an event's image lands azimuthally in the camera: a gamma image clusters near
@@ -1059,27 +1071,32 @@ function iactEventAzimuthDeg(ptype) {
   return Math.random()*360;
 }
 
-function iactGaussianAbs(sigma) {
-  const u1 = Math.random(), u2 = Math.random();
-  return Math.abs(sigma * Math.sqrt(-2*Math.log(Math.max(1e-12,u1))) * Math.cos(2*Math.PI*u2));
-}
 function iactStatEvent() {
   const isGamma = Math.random() < iact.signalFraction;
-  let alphaOn, alphaOff;
+  const thetaMax2 = 0.5; // deg^2, matches the hadron-background scale used elsewhere
+  const bgTheta2 = () => Math.random()*thetaMax2;               // flat: uniform sky background
+  const sigTheta2 = () => -0.02*Math.log(Math.max(1e-9, Math.random())); // tight, PSF-like spread
+
+  let theta2On, theta2Off;
   if (isGamma) {
-    alphaOn = Math.min(90, iactGaussianAbs(6));   // aligned with the TRUE (ON) source
-    alphaOff = Math.random()*90;                   // unrelated to an OFF position
+    // Same DISP-sign accuracy as the single-event model: when the sign guess is right the
+    // reconstruction lands close to the true source (small theta^2); when it's wrong it's
+    // just as displaced as background.
+    const signOk = Math.random() < 0.82;
+    theta2On = signOk ? sigTheta2() : bgTheta2();
+    theta2Off = bgTheta2(); // unrelated to an OFF position regardless of the sign guess
   } else {
-    alphaOn = Math.random()*90;                    // isotropic hadron background
-    alphaOff = Math.random()*90;
+    theta2On = bgTheta2();
+    theta2Off = bgTheta2();
   }
-  return { alphaOn, alphaOff, isGamma };
+  return { theta2On, theta2Off, isGamma };
 }
 function iactRunEvents(n) {
+  const nBins = iact.alphaHistOn.length, thetaMax2 = 0.5;
   for (let i = 0; i < n; i++) {
     const e = iactStatEvent();
-    iact.alphaHistOn[Math.min(8, Math.floor(e.alphaOn/10))]++;
-    iact.alphaHistOff[Math.min(8, Math.floor(e.alphaOff/10))]++;
+    iact.alphaHistOn[Math.min(nBins-1, Math.floor(e.theta2On/thetaMax2*nBins))]++;
+    iact.alphaHistOff[Math.min(nBins-1, Math.floor(e.theta2Off/thetaMax2*nBins))]++;
     iact.eventsRun++;
   }
 }
@@ -1168,17 +1185,26 @@ function iactComputeHillas() {
   const widthGeomDeg = Math.atan(lateralM/heightAtMaxM) * 180/Math.PI;
   let widthDeg = Math.sqrt(widthGeomDeg*widthGeomDeg + 0.05*0.05);
   let alphaDeg;
+  // Whether this event's TRUE origin actually matches the assumed (ON) source direction
+  // we're testing against. A hadron never does. A gamma fired "from OFF" has a perfectly
+  // clean shower shape (that's intrinsic to the physics) but is — by construction — not
+  // pointing at the position we're testing, so its reconstruction should look exactly
+  // like background: good shape cuts, bad theta^2. That distinction (shape vs pointing)
+  // is a real and important subtlety in Cherenkov analysis.
+  const alignedWithAssumedSource = (ptype === 'gamma' && iact.fireOrigin !== 'off');
   if (ptype === 'hadron') {
     // Hadronic sub-showers scatter transversely and don't share the gamma's clean radial
     // alignment with the assumed source, so both width and pointing get genuinely irregular.
     lengthDeg *= 1.0 + iactRand()*0.5;
     widthDeg  *= 2.0 + iactRand()*1.4;
-    alphaDeg = iactRand()*85 + 5;
-  } else {
+  }
+  if (alignedWithAssumedSource) {
     // A gamma shower's elongation is inherently radial (it lies along the true sightline
     // sweep toward the source) — alpha near zero is a geometric fact here, not an assumption;
     // only a small jitter representing realistic image-parameter reconstruction noise is added.
     alphaDeg = iactRand()*4;
+  } else {
+    alphaDeg = iactRand()*85 + 5;
   }
   iact.seed = seedBase; // don't let readout calls consume randomness differently from render
   const triggered = effImpact < poolR;
@@ -1187,19 +1213,60 @@ function iactComputeHillas() {
   // NOT perfect — reported accuracy is roughly 65% analytically, up to ~85-90% with a
   // trained model. We draw a per-event coin flip at that rate rather than always
   // "knowing" the right side, so the reconstruction can visibly miss sometimes.
-  const dispSignAccuracy = ptype === 'gamma' ? 0.82 : 0.5;
+  const dispSignAccuracy = alignedWithAssumedSource ? 0.82 : 0.5;
   const dispSignCorrect = iactRand() < dispSignAccuracy;
   iact.seed = seedBase;
-  return { hmax, poolR, distanceDeg, lengthDeg, widthDeg, alphaDeg, ptype, sizeRel: iactNmax(E), triggered, dispSignCorrect };
+
+  // theta^2: squared angular offset between the DISP-reconstructed position and the
+  // assumed source — the modern standard test statistic (in place of alpha). It's flat
+  // for isotropic background across its WHOLE range, not just at large values, because
+  // equal-width theta^2 bins correspond to equal-area sky annuli; alpha only achieves
+  // something similar by symmetry. A wrong DISP sign here shows up directly as a large
+  // theta^2 even for a genuine gamma.
+  const dispDeg = Math.max(0, 1 - widthDeg/lengthDeg) * lengthDeg*0.5;
+  const aRad = alphaDeg*Math.PI/180;
+  const srcX = iact.wobbleOn ? iact.wobbleOffsetDeg : 0, srcY = 0;
+  const towardSourceAngle = Math.atan2(srcY, srcX-distanceDeg); // centroid sits at (distanceDeg,0)
+  let axisTrue = aRad;
+  const dd1 = Math.abs(((aRad-towardSourceAngle+Math.PI)%(2*Math.PI))-Math.PI);
+  const dd2 = Math.abs(((aRad+Math.PI-towardSourceAngle+Math.PI)%(2*Math.PI))-Math.PI);
+  if (dd2 < dd1) axisTrue = aRad+Math.PI;
+  const axisRecon = dispSignCorrect ? axisTrue : axisTrue+Math.PI;
+  const reconX = distanceDeg + Math.cos(axisRecon)*dispDeg;
+  const reconY = Math.sin(axisRecon)*dispDeg;
+  const theta2Deg2 = (reconX-srcX)*(reconX-srcX) + (reconY-srcY)*(reconY-srcY);
+
+  return { hmax, poolR, distanceDeg, lengthDeg, widthDeg, alphaDeg, ptype, sizeRel: iactNmax(E), triggered, dispSignCorrect, theta2Deg2 };
 }
 
+// Classic "Supercuts"-style box cuts (Punch et al. 1992 / Whipple): simultaneous
+// fixed-range cuts on several Hillas parameters, ANDed together, rather than one
+// single discriminator. Width is the strongest shape cut here (hadron images are
+// consistently wider); length and distance are the classic "quality" bounds — length
+// alone barely separates the populations in this simplified model (it's driven mostly
+// by viewing geometry for both types, same as in real analyses), but it's included
+// because that's genuinely how Supercuts worked. theta^2 is the separate directional
+// (pointing) cut on top of the shape cuts.
+const IACT_CUTS = {
+  width:    [0.0,  0.20],
+  length:   [0.03, 1.35],
+  distance: [0.05, 2.5],
+  theta2:   [0.0,  0.03],
+};
+function iactCutDetails(h) {
+  if (h.ptype === 'muon') return null;
+  const checks = {
+    width:    h.widthDeg    >= IACT_CUTS.width[0]    && h.widthDeg    <= IACT_CUTS.width[1],
+    length:   h.lengthDeg   >= IACT_CUTS.length[0]   && h.lengthDeg   <= IACT_CUTS.length[1],
+    distance: h.distanceDeg >= IACT_CUTS.distance[0] && h.distanceDeg <= IACT_CUTS.distance[1],
+    theta2:   h.theta2Deg2  >= IACT_CUTS.theta2[0]   && h.theta2Deg2  <= IACT_CUTS.theta2[1],
+  };
+  return { checks, allPass: Object.values(checks).every(Boolean) };
+}
 function iactClassify(h) {
   if (h.ptype === 'muon') return 'Muon ring (calibration event)';
-  // Alpha (does the image point back at the assumed source?) is the robust cut here —
-  // unlike a raw width/length ratio, it doesn't get confused by small-impact-parameter
-  // gamma events that are legitimately compact/round rather than elongated.
-  const gammaLike = h.alphaDeg < 15 && h.widthDeg < 0.4;
-  return gammaLike ? 'Gamma-like' : 'Hadron-like (background)';
+  const cuts = iactCutDetails(h);
+  return cuts.allPass ? 'Gamma-like' : 'Hadron-like (background)';
 }
 
 function updateIACTReadouts() {
@@ -1224,15 +1291,29 @@ function updateIACTReadouts() {
     } else {
       document.getElementById('lbl-iact-length').textContent = 'Length';
       document.getElementById('lbl-iact-width').textContent = 'Width';
-      document.getElementById('lbl-iact-alpha').textContent = 'Alpha';
+      document.getElementById('lbl-iact-alpha').textContent = 'θ² (recon.)';
       document.getElementById('ro-iact-length').textContent = iact.hillas.lengthDeg.toFixed(3) + '°';
       document.getElementById('ro-iact-width').textContent = iact.hillas.widthDeg.toFixed(3) + '°';
       document.getElementById('ro-iact-distance').textContent = iact.hillas.distanceDeg.toFixed(3) + '°';
-      document.getElementById('ro-iact-alpha').textContent = iact.hillas.alphaDeg.toFixed(1) + '°';
+      document.getElementById('ro-iact-alpha').textContent = iact.hillas.theta2Deg2.toFixed(4) + ' deg²';
     }
     document.getElementById('ro-iact-classify').textContent = iactClassify(iact.hillas);
+
+    const cutsSec = document.getElementById('iact-cuts-section');
+    if (iact.hillas.ptype === 'muon') {
+      cutsSec.style.display = 'none';
+    } else {
+      cutsSec.style.display = '';
+      const cd = iactCutDetails(iact.hillas);
+      const fmt = (ok, val, unit) => (ok ? '✓ ' : '✗ ') + val + unit;
+      document.getElementById('ro-cut-width').textContent = fmt(cd.checks.width, iact.hillas.widthDeg.toFixed(3), '°');
+      document.getElementById('ro-cut-length').textContent = fmt(cd.checks.length, iact.hillas.lengthDeg.toFixed(3), '°');
+      document.getElementById('ro-cut-distance').textContent = fmt(cd.checks.distance, iact.hillas.distanceDeg.toFixed(3), '°');
+      document.getElementById('ro-cut-theta2').textContent = fmt(cd.checks.theta2, iact.hillas.theta2Deg2.toFixed(4), ' deg²');
+    }
   } else {
     sec.style.display = 'none';
+    document.getElementById('iact-cuts-section').style.display = 'none';
   }
 }
 
@@ -1266,6 +1347,7 @@ function iactStartNextQueuedFire() {
   }
   iact.queueRemaining--;
   iact.ptype = Math.random() < iact.signalFraction ? 'gamma' : 'hadron';
+  iact.fireOrigin = 'on'; // burst gammas represent the true signal population
   // Randomize where each shot actually lands, rather than repeating the same geometry 5x
   iact.impactM = Math.round(Math.random()*180);
   iact.attackDeg = Math.round(Math.random()*Math.random()*25); // usually small, occasionally larger
@@ -3649,6 +3731,26 @@ function iactCameraColor(v) {
   if (v < 0.66) { const f=(v-0.33)/0.33; return [Math.round(30+f*180), Math.round(94+f*140), Math.round(162-f*80)]; }
   const f=(v-0.66)/0.34; return [Math.round(210+f*45), Math.round(234+f*20), Math.round(82-f*30)];
 }
+// Telescope 2's color scale in the merged stereo view — deliberately a different hue
+// (dark red → orange → warm yellow) from Telescope 1's blue/cyan/green scale, so the two
+// images stay visually distinguishable where they overlap in the shared camera plane.
+function iactCameraColor2(v) {
+  v = Math.max(0, Math.min(1, v));
+  if (v < 0.001) return [10,14,22];
+  if (v < 0.33) { const f=v/0.33; return [Math.round(10+f*70), Math.round(14+f*30), Math.round(22+f*14)]; }
+  if (v < 0.66) { const f=(v-0.33)/0.33; return [Math.round(80+f*140), Math.round(44+f*80), Math.round(36-f*14)]; }
+  const f=(v-0.66)/0.34; return [Math.round(220+f*35), Math.round(124+f*90), Math.round(22+f*40)];
+}
+// Screen blend: combines two hex-cell colors so overlapping bright regions (where both
+// telescopes see signal) brighten toward white rather than one image simply occluding
+// the other — makes the crossing region visually obvious.
+function iactScreenBlend(c1, c2) {
+  return [
+    Math.round(255-((255-c1[0])*(255-c2[0]))/255),
+    Math.round(255-((255-c1[1])*(255-c2[1]))/255),
+    Math.round(255-((255-c1[2])*(255-c2[2]))/255),
+  ];
+}
 const IACT_PIXEL_SPACING_DEG = 0.22;
 const IACT_HEX_R_DEG = IACT_PIXEL_SPACING_DEG / Math.sqrt(3);
 function iactHexPath(ctx, x, y, R) {
@@ -3671,12 +3773,22 @@ function drawIACT() {
 
   if (iact.view === 'wobble') {
     drawIACTWobble();
-  } else if (iact.view === 'stereo') {
-    drawIACTStereo();
   } else {
-    const atmoW = imgW * 0.58;
+    const twoTel = iact.nTel === 2;
+    const atmoW = imgW * (twoTel ? 0.46 : 0.54);
+    const camW = imgW - atmoW;
     drawIACTAtmosphere(0, 0, atmoW, imgH);
-    drawIACTCamera(atmoW, 0, imgW-atmoW, imgH);
+    if (twoTel && iact.hillas && iact.hillas.ptype !== 'muon') {
+      // Genuine stereoscopic reconstruction: both telescopes' images are plotted in ONE
+      // shared camera plane (valid because both point at the same tracked sky position),
+      // each ellipse's major axis is extended into a full line, and the two lines' actual
+      // intersection point IS the reconstructed direction — no per-telescope head/tail
+      // guessing needed, unlike the single-telescope DISP method.
+      const h2 = iactEnsureStereoCache().h2;
+      drawIACTStereoCamera(atmoW, 0, camW, imgH, { h2 });
+    } else {
+      drawIACTCamera(atmoW, 0, camW, imgH, twoTel ? { title: 'Telescope 1 image' } : {});
+    }
   }
 
   ctx.restore();
@@ -3760,14 +3872,15 @@ function drawIACTAlphaPlot(x0, y0, w, h) {
 
   const marginL = 46, marginR = 20, marginT = 34, marginB = 46;
   const plotW = w-marginL-marginR, plotH = h-marginT-marginB;
+  const thetaMax2 = 0.5;
   ctx.font = '11px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(230,240,250,0.85)';
-  ctx.fillText('Alpha plot', marginL, 20);
+  ctx.fillText('θ² plot', marginL, 20);
 
   const maxCount = Math.max(1, ...iact.alphaHistOn, ...iact.alphaHistOff.map(v=>v/3));
   ctx.strokeStyle = 'rgba(150,180,210,0.4)'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(marginL,marginT); ctx.lineTo(marginL,marginT+plotH); ctx.lineTo(marginL+plotW,marginT+plotH); ctx.stroke();
 
-  const nBins = 9, bw = plotW/nBins;
+  const nBins = iact.alphaHistOn.length, bw = plotW/nBins, binWidth2 = thetaMax2/nBins;
   ctx.font = '9px "Share Tech Mono", monospace';
   for (let i = 0; i < nBins; i++) {
     const x = marginL + i*bw;
@@ -3778,9 +3891,9 @@ function drawIACTAlphaPlot(x0, y0, w, h) {
     ctx.fillStyle = 'rgba(255,180,120,0.75)';
     ctx.fillRect(x+2+bw*0.44, marginT+plotH-offH, bw*0.42, offH);
     ctx.fillStyle = 'rgba(180,200,220,0.6)';
-    ctx.fillText((i*10)+'-'+(i*10+10), x+2, marginT+plotH+12);
+    ctx.fillText((i*binWidth2).toFixed(2), x, marginT+plotH+12);
   }
-  ctx.fillText('alpha (degrees)', marginL+plotW/2-30, h-8);
+  ctx.fillText('θ² (deg²)', marginL+plotW/2-20, h-8);
 
   ctx.font = '10px "Share Tech Mono", monospace';
   ctx.fillStyle = 'rgba(140,255,190,0.9)'; ctx.fillText('■ ON', marginL, marginT-8);
@@ -3788,10 +3901,10 @@ function drawIACTAlphaPlot(x0, y0, w, h) {
 
   if (iact.eventsRun === 0) {
     ctx.font = '11px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(200,220,240,0.6)';
-    ctx.fillText('Run events to build the alpha plot →', marginL, marginT+plotH/2);
+    ctx.fillText('Run events to build the θ² plot →', marginL, marginT+plotH/2);
   } else {
     ctx.font = '10px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(220,230,240,0.75)';
-    wrapText(ctx, 'A real gamma-ray source shows up as an ON excess concentrated at low alpha, with OFF staying flat — that excess is the detection.', marginL, marginT+plotH+30, plotW, 12);
+    wrapText(ctx, 'A real gamma-ray source shows up as an ON excess concentrated at low θ², with OFF staying flat across the WHOLE range — equal θ² bins are equal-area sky annuli, so uniform background is flat everywhere here, not just at large θ².', marginL, marginT+plotH+30, plotW, 12);
   }
 
   ctx.restore();
@@ -3804,100 +3917,16 @@ function drawIACTAlphaPlot(x0, y0, w, h) {
 //  different ground positions intersect at (very nearly) one point,
 //  no head/tail guess required.
 // ═══════════════════════════════════════════════════════════════════
-function drawIACTStereo() {
-  const ctx = oc;
-  ctx.save();
-
-  const cx = imgW/2, cy = imgH/2 - 10;
-  const pxPerDeg = Math.min(imgW,imgH) * 0.13;
-
-  ctx.font = '11px "Share Tech Mono", monospace';
-  ctx.fillStyle = 'rgba(230,240,250,0.85)';
-  ctx.fillText('Stereo reconstruction — shared sky view', 16, 24);
-
-  if (!iact.hillas) {
-    ctx.font = '12px "Share Tech Mono", monospace';
-    ctx.fillStyle = 'rgba(200,220,240,0.7)';
-    ctx.fillText('Fire a shower in Single Event view first, then come back here.', 16, imgH/2);
-    ctx.restore();
-    return;
-  }
-  if (iact.hillas.ptype === 'muon') {
-    ctx.font = '12px "Share Tech Mono", monospace';
-    ctx.fillStyle = 'rgba(200,220,240,0.7)';
-    ctx.fillText('Muon rings encode position directly (ring center) — stereo triangulation applies to shower ellipses.', 16, imgH/2);
-    ctx.restore();
-    return;
-  }
-
+function iactEnsureStereoCache() {
   const h1 = iact.hillas;
-  const savedImpact = iact.impactM, savedSeed = iact.seed;
-  iact.impactM = iact.impactM2;
-  const h2 = iactComputeHillas();
-  iact.impactM = savedImpact; iact.seed = savedSeed;
-
-  // shared sky frame: center = assumed/true source position
-  ctx.beginPath(); ctx.arc(cx, cy, 2.9*pxPerDeg, 0, Math.PI*2);
-  ctx.strokeStyle = 'rgba(150,180,210,0.25)'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx-6,cy); ctx.lineTo(cx+6,cy); ctx.moveTo(cx,cy-6); ctx.lineTo(cx,cy+6);
-  ctx.strokeStyle = 'rgba(255,220,120,0.7)'; ctx.lineWidth = 1.3; ctx.stroke();
-  ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(255,220,120,0.7)';
-  ctx.fillText('true source', cx+8, cy-2.9*pxPerDeg-6);
-
-  function telescopeLine(distanceDeg, azimuthRad, alphaDeg, jitterSign) {
-    const gx = distanceDeg*Math.cos(azimuthRad), gy = distanceDeg*Math.sin(azimuthRad);
-    const toCenterAngle = Math.atan2(-gy, -gx);
-    const axisAngle = toCenterAngle + jitterSign*(alphaDeg*Math.PI/180);
-    return { gx, gy, axisAngle };
+  if (!iact.stereoCache || iact.stereoCache.forHillas !== h1 || iact.stereoCache.impactM2 !== iact.impactM2) {
+    const savedImpact = iact.impactM;
+    iact.impactM = iact.impactM2;
+    const h2 = iactComputeHillas();
+    iact.impactM = savedImpact;
+    iact.stereoCache = { forHillas: h1, impactM2: iact.impactM2, h2 };
   }
-  const az2 = iact.tel2AngleDeg*Math.PI/180;
-  const t1 = telescopeLine(h1.distanceDeg, 0, h1.alphaDeg, iactRand()<0.5?1:-1);
-  const t2 = telescopeLine(h2.distanceDeg, az2, h2.alphaDeg, iactRand()<0.5?1:-1);
-
-  function drawTelLine(t, color, label) {
-    const cxp = cx+t.gx*pxPerDeg, cyp = cy+t.gy*pxPerDeg;
-    const len = 3.6*pxPerDeg;
-    ctx.beginPath();
-    ctx.moveTo(cxp-Math.cos(t.axisAngle)*len, cyp-Math.sin(t.axisAngle)*len);
-    ctx.lineTo(cxp+Math.cos(t.axisAngle)*len, cyp+Math.sin(t.axisAngle)*len);
-    ctx.strokeStyle = `rgba(${color},0.55)`; ctx.lineWidth = 1.4; ctx.stroke();
-    ctx.beginPath(); ctx.arc(cxp,cyp,4,0,Math.PI*2);
-    ctx.fillStyle = `rgba(${color},0.9)`; ctx.fill();
-    ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = `rgba(${color},0.8)`;
-    ctx.fillText(label, cxp+8, cyp-8);
-  }
-  drawTelLine(t1, '140,210,255', 'Telescope 1 image');
-  drawTelLine(t2, '255,180,120', 'Telescope 2 image');
-
-  // Line-line intersection (the stereo-reconstructed direction — no sign guess needed)
-  const d1x = Math.cos(t1.axisAngle), d1y = Math.sin(t1.axisAngle);
-  const d2x = Math.cos(t2.axisAngle), d2y = Math.sin(t2.axisAngle);
-  const denom = d1x*d2y - d1y*d2x;
-  let reconDeg = null;
-  if (Math.abs(denom) > 1e-6) {
-    const tt = ((t2.gx-t1.gx)*d2y - (t2.gy-t1.gy)*d2x) / denom;
-    const ix = t1.gx + tt*d1x, iy = t1.gy + tt*d1y;
-    reconDeg = Math.hypot(ix,iy);
-    const rx = cx+ix*pxPerDeg, ry = cy+iy*pxPerDeg;
-    ctx.beginPath(); ctx.arc(rx,ry,5,0,Math.PI*2);
-    ctx.fillStyle = 'rgba(140,255,190,0.95)'; ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1.2; ctx.stroke();
-    ctx.font = '10px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(140,255,190,0.95)';
-    ctx.fillText('stereo reconstruction', rx+9, ry+3);
-  }
-
-  ctx.font = '11px "Share Tech Mono", monospace';
-  ctx.fillStyle = 'rgba(220,230,240,0.85)';
-  ctx.fillText(`Telescope 1: α=${h1.alphaDeg.toFixed(1)}°, distance=${h1.distanceDeg.toFixed(2)}°`, 16, imgH-70);
-  ctx.fillText(`Telescope 2: α=${h2.alphaDeg.toFixed(1)}°, distance=${h2.distanceDeg.toFixed(2)}°`, 16, imgH-54);
-  if (reconDeg !== null) {
-    ctx.fillStyle = 'rgba(140,255,190,0.9)';
-    ctx.fillText(`Reconstruction error: ${reconDeg.toFixed(3)}° from true source`, 16, imgH-38);
-  }
-  ctx.fillStyle = 'rgba(200,220,240,0.65)';
-  wrapText(ctx, 'Two independent lines cross at essentially one point — no head/tail guess needed, unlike single-telescope DISP.', 16, imgH-18, imgW-32, 12);
-
-  ctx.restore();
+  return iact.stereoCache;
 }
 
 
@@ -3958,6 +3987,9 @@ function drawIACTAtmosphere(x0, y0, w, h) {
   // between these two lines is exactly what becomes the ellipse "length" in the camera —
   // not a side-view photograph, but the angular sweep of the shower's altitude range as
   // seen from this particular (off-axis) telescope position.
+  const showTel2 = iact.nTel === 2;
+  const telX2 = cx + iact.impactM2*pxPerM;
+
   if (iact.ptype !== 'muon') {
     const geo = iactSightlineGeometry();
     const pTop = [cx + geo.yTop*driftPx, yOfFrac(geo.yTop)];
@@ -3966,8 +3998,25 @@ function drawIACTAtmosphere(x0, y0, w, h) {
     ctx.beginPath(); ctx.moveTo(telX, groundY); ctx.lineTo(pTop[0], pTop[1]); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(telX, groundY); ctx.lineTo(pBot[0], pBot[1]); ctx.stroke();
     ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(255,225,140,0.75)';
-    ctx.fillText(`sightline sweep → image length ${Math.abs(geo.angBot-geo.angTop).toFixed(2)}°`,
+    ctx.fillText(`T1 sightline sweep → ${Math.abs(geo.angBot-geo.angTop).toFixed(2)}°`,
       Math.min(w-190, telX+8), groundY-10);
+
+    // Telescope 2's sightlines: identical geometry, just evaluated at its own impact
+    // parameter — the SAME shower, seen from a different ground position.
+    if (showTel2) {
+      const savedImpact = iact.impactM;
+      iact.impactM = iact.impactM2;
+      const geo2 = iactSightlineGeometry();
+      iact.impactM = savedImpact;
+      const pTop2 = [cx + geo2.yTop*driftPx, yOfFrac(geo2.yTop)];
+      const pBot2 = [cx + geo2.yBot*driftPx, yOfFrac(geo2.yBot)];
+      ctx.strokeStyle = 'rgba(255,180,120,0.7)'; ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.moveTo(telX2, groundY); ctx.lineTo(pTop2[0], pTop2[1]); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(telX2, groundY); ctx.lineTo(pBot2[0], pBot2[1]); ctx.stroke();
+      ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(255,180,120,0.75)';
+      ctx.fillText(`T2 sightline sweep → ${Math.abs(geo2.angBot-geo2.angTop).toFixed(2)}°`,
+        Math.min(w-190, telX2+8), groundY-22);
+    }
   }
 
   ctx.save(); ctx.translate(telX, groundY);
@@ -3976,8 +4025,19 @@ function drawIACTAtmosphere(x0, y0, w, h) {
   ctx.fillStyle = 'rgba(60,80,100,0.6)'; ctx.fill(); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(0,-14); ctx.lineTo(0,-22); ctx.stroke();
   ctx.fillStyle = 'rgba(200,220,240,0.7)'; ctx.font = '9px monospace';
-  ctx.fillText('IACT', -14, 14);
+  ctx.fillText(showTel2 ? 'T1' : 'IACT', showTel2 ? -8 : -14, 14);
   ctx.restore();
+
+  if (showTel2) {
+    ctx.save(); ctx.translate(telX2, groundY);
+    ctx.strokeStyle = 'rgba(255,200,160,0.85)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-8,-14); ctx.lineTo(8,-14); ctx.closePath();
+    ctx.fillStyle = 'rgba(100,70,50,0.6)'; ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-14); ctx.lineTo(0,-22); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,200,160,0.8)'; ctx.font = '9px monospace';
+    ctx.fillText('T2', -8, 14);
+    ctx.restore();
+  }
 
   const t = iact.fireT, D = iact.fireDuration;
   const tDescend0 = 0, tDescend1 = 0.13*D;
@@ -4065,7 +4125,8 @@ function drawIACTAtmosphere(x0, y0, w, h) {
   ctx.restore();
 }
 
-function drawIACTCamera(x0, y0, w, h) {
+function drawIACTCamera(x0, y0, w, h, opts) {
+  opts = opts || {};
   const ctx = oc;
   ctx.save();
   ctx.translate(x0, y0);
@@ -4077,15 +4138,25 @@ function drawIACTCamera(x0, y0, w, h) {
 
   ctx.font = '11px "Share Tech Mono", monospace';
   ctx.fillStyle = 'rgba(230,240,250,0.85)';
-  ctx.fillText('Camera image', 14, 20);
+  ctx.fillText(opts.title || 'Camera image', 14, 20);
 
   const t = iact.fireT, D = iact.fireDuration;
   const revealStart = 0.75*D;
   const revealAlpha = Math.max(0, Math.min(1, (t-revealStart)/(D-revealStart)));
 
-  let show = null;
-  if (iact.hillas) show = iact.hillas;
-  else if (revealAlpha > 0) show = iact.pendingHillas;
+  // An explicit hillas override (e.g. telescope 2's independently-computed image)
+  // bypasses the fire-animation reveal — it's shown fully as soon as it exists.
+  let show;
+  if (opts.hillas !== undefined) {
+    show = opts.hillas;
+  } else if (iact.hillas) {
+    show = iact.hillas;
+  } else if (revealAlpha > 0) {
+    show = iact.pendingHillas;
+  } else {
+    show = null;
+  }
+  const revealNow = opts.hillas !== undefined ? 1 : revealAlpha;
 
   for (const px of IACT_CAMERA_PIXELS) {
     const x = cx + px.x*pxPerDeg, y = cy + px.y*pxPerDeg;
@@ -4097,14 +4168,14 @@ function drawIACTCamera(x0, y0, w, h) {
         const ang = Math.atan2(dy,dx);
         const arcOk = ((ang+Math.PI*2) % (Math.PI*2)) < show.completeness*Math.PI*2;
         const sigma = 0.09;
-        intensity = arcOk ? Math.exp(-Math.pow(dist-show.ringRadiusDeg,2)/(2*sigma*sigma)) * revealAlpha : 0;
+        intensity = arcOk ? Math.exp(-Math.pow(dist-show.ringRadiusDeg,2)/(2*sigma*sigma)) * revealNow : 0;
       } else {
         const a = show.alphaDeg*Math.PI/180;
         const relx = px.x - show.distanceDeg, rely = px.y;
         const u =  relx*Math.cos(a) + rely*Math.sin(a);
         const v = -relx*Math.sin(a) + rely*Math.cos(a);
         const L = Math.max(0.05, show.lengthDeg/2), W = Math.max(0.03, show.widthDeg/2);
-        intensity = Math.exp(-((u*u)/(2*L*L) + (v*v)/(2*W*W))) * revealAlpha;
+        intensity = Math.exp(-((u*u)/(2*L*L) + (v*v)/(2*W*W))) * revealNow;
       }
     }
     const [r,g,b] = iactCameraColor(intensity);
@@ -4121,7 +4192,7 @@ function drawIACTCamera(x0, y0, w, h) {
 
   // ── Wobble ON/OFF regions + accumulated landed events — the bridge from a single
   // image to the population statistics view ──
-  if (iact.wobbleOn) {
+  if (iact.wobbleOn && opts.showWobble !== false) {
     const off = iact.wobbleOffsetDeg;
     const regionAngles = [0, Math.PI/2, Math.PI, 3*Math.PI/2];
     const regionNames = ['ON','OFF','OFF','OFF'];
@@ -4150,7 +4221,7 @@ function drawIACTCamera(x0, y0, w, h) {
   }
 
   // ── Reconstruction overlay: how Hillas parameters actually locate the source ──
-  if (show && show.triggered && show.ptype !== 'muon' && revealAlpha > 0.5) {
+  if (show && show.triggered && show.ptype !== 'muon' && revealNow > 0.5) {
     const a = show.alphaDeg*Math.PI/180;
     const centroidX = cx + show.distanceDeg*pxPerDeg, centroidY = cy;
     const srcX = iact.wobbleOn ? cx + iact.wobbleOffsetDeg*pxPerDeg : cx;
@@ -4159,7 +4230,6 @@ function drawIACTCamera(x0, y0, w, h) {
     // Major axis, extended both directions across the camera (dotted — this line, not
     // a single point, is all one telescope's image constrains on its own).
     const lineLen = 3.4*pxPerDeg;
-    ctx.save();
     ctx.setLineDash([4,4]);
     ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 1;
     ctx.beginPath();
@@ -4209,17 +4279,18 @@ function drawIACTCamera(x0, y0, w, h) {
     ctx.font = '9px "Share Tech Mono", monospace';
     ctx.fillStyle = show.dispSignCorrect ? 'rgba(140,255,190,0.9)' : 'rgba(255,140,140,0.9)';
     ctx.fillText(show.dispSignCorrect ? 'reconstructed (DISP)' : 'reconstructed (DISP, wrong side)', reconX+8, reconY+3);
+    ctx.fillText(`θ² = ${show.theta2Deg2.toFixed(4)} deg²`, reconX+8, reconY+15);
   }
 
   if (!iact.firing && !iact.hillas) {
     ctx.font = '11px "Share Tech Mono", monospace';
     ctx.fillStyle = 'rgba(180,200,220,0.6)';
     ctx.fillText('Fire Shower to trigger', cx-70, cy+2.9*pxPerDeg+16);
-  } else if (show && !show.triggered && revealAlpha > 0.3) {
+  } else if (show && !show.triggered && revealNow > 0.3) {
     ctx.font = '11px "Share Tech Mono", monospace';
     ctx.fillStyle = 'rgba(255,160,140,0.85)';
     ctx.fillText('NO TRIGGER — outside light pool', cx-90, cy+2.9*pxPerDeg+16);
-  } else if (show && show.triggered && revealAlpha > 0.5) {
+  } else if (show && show.triggered && revealNow > 0.5) {
     ctx.font = '11px "Share Tech Mono", monospace';
     ctx.fillStyle = 'rgba(150,255,190,0.85)';
     ctx.fillText(show.ptype === 'muon' ? 'MUON RING' : 'TRIGGERED', cx-32, cy+2.9*pxPerDeg+16);
@@ -4228,6 +4299,138 @@ function drawIACTCamera(x0, y0, w, h) {
   ctx.restore();
 }
 
+function drawIACTStereoCamera(x0, y0, w, h, opts) {
+  opts = opts || {};
+  const ctx = oc;
+  ctx.save();
+  ctx.translate(x0, y0);
+  ctx.beginPath(); ctx.rect(0,0,w,h); ctx.clip();
+
+  const cx = w/2, cy = h/2 - 10;
+  const pxPerDeg = Math.min(w,h) * 0.16;
+  const hexR = IACT_HEX_R_DEG * pxPerDeg;
+
+  ctx.font = '11px "Share Tech Mono", monospace';
+  ctx.fillStyle = 'rgba(120,200,255,0.85)';
+  ctx.fillText('Telescope 1', 14, 20);
+  ctx.fillStyle = 'rgba(255,170,110,0.85)';
+  ctx.fillText('+ Telescope 2', 100, 20);
+  ctx.fillStyle = 'rgba(200,220,240,0.55)';
+  ctx.fillText('— shared camera plane', 205, 20);
+
+  const t = iact.fireT, D = iact.fireDuration;
+  const revealStart = 0.75*D;
+  const revealAlpha = Math.max(0, Math.min(1, (t-revealStart)/(D-revealStart)));
+  const revealNow = iact.hillas ? 1 : revealAlpha;
+
+  const h1 = iact.hillas;
+  const h2 = opts.h2;
+
+  // Telescope 1 sits, by convention, along the frame's own +x axis: centroid (d1,0),
+  // major-axis angle a1 measured directly in this shared frame.
+  const c1x = h1.distanceDeg, c1y = 0;
+  const a1 = h1.alphaDeg*Math.PI/180;
+  const L1 = Math.max(0.05, h1.lengthDeg/2), W1 = Math.max(0.03, h1.widthDeg/2);
+
+  // Telescope 2 sits at its own impact-driven distance, but around the shower core at
+  // a different ground azimuth than Telescope 1 — otherwise both images would fall on
+  // the same line and the "crossing point" would be undefined. That azimuth rotates
+  // both its centroid position AND its (otherwise independently-computed) major-axis
+  // angle into this shared frame.
+  const az2 = iact.tel2AzimuthDeg*Math.PI/180;
+  const c2x = h2.distanceDeg*Math.cos(az2), c2y = h2.distanceDeg*Math.sin(az2);
+  const a2 = h2.alphaDeg*Math.PI/180 + az2;
+  const L2 = Math.max(0.05, h2.lengthDeg/2), W2 = Math.max(0.03, h2.widthDeg/2);
+
+  for (const px of IACT_CAMERA_PIXELS) {
+    const x = cx + px.x*pxPerDeg, y = cy + px.y*pxPerDeg;
+    let i1 = 0, i2 = 0;
+    if (h1.triggered) {
+      const relx = px.x-c1x, rely = px.y-c1y;
+      const u =  relx*Math.cos(a1) + rely*Math.sin(a1);
+      const v = -relx*Math.sin(a1) + rely*Math.cos(a1);
+      i1 = Math.exp(-((u*u)/(2*L1*L1) + (v*v)/(2*W1*W1))) * revealNow;
+    }
+    if (h2.triggered) {
+      const relx = px.x-c2x, rely = px.y-c2y;
+      const u =  relx*Math.cos(a2) + rely*Math.sin(a2);
+      const v = -relx*Math.sin(a2) + rely*Math.cos(a2);
+      i2 = Math.exp(-((u*u)/(2*L2*L2) + (v*v)/(2*W2*W2))) * revealNow;
+    }
+    const [r,g,b] = iactScreenBlend(iactCameraColor(i1), iactCameraColor2(i2));
+    iactHexPath(ctx, x, y, hexR*0.96);
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 0.5; ctx.stroke();
+  }
+
+  // camera boundary + center crosshair
+  ctx.beginPath(); ctx.arc(cx, cy, 2.6*pxPerDeg, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(150,180,210,0.3)'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-6,cy); ctx.lineTo(cx+6,cy); ctx.moveTo(cx,cy-6); ctx.lineTo(cx,cy+6);
+  ctx.strokeStyle = 'rgba(200,220,240,0.4)'; ctx.lineWidth = 1; ctx.stroke();
+
+  const srcX = iact.wobbleOn ? iact.wobbleOffsetDeg : 0, srcY = 0;
+
+  if (h1.triggered && h2.triggered && revealNow > 0.5) {
+    const lineLen = 3.4;
+    ctx.setLineDash([4,4]);
+    ctx.strokeStyle = 'rgba(120,200,255,0.55)'; ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cx+(c1x-Math.cos(a1)*lineLen)*pxPerDeg, cy+(c1y-Math.sin(a1)*lineLen)*pxPerDeg);
+    ctx.lineTo(cx+(c1x+Math.cos(a1)*lineLen)*pxPerDeg, cy+(c1y+Math.sin(a1)*lineLen)*pxPerDeg);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,170,110,0.6)'; ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cx+(c2x-Math.cos(a2)*lineLen)*pxPerDeg, cy+(c2y-Math.sin(a2)*lineLen)*pxPerDeg);
+    ctx.lineTo(cx+(c2x+Math.cos(a2)*lineLen)*pxPerDeg, cy+(c2y+Math.sin(a2)*lineLen)*pxPerDeg);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.beginPath(); ctx.arc(cx+c1x*pxPerDeg, cy+c1y*pxPerDeg, 3, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(140,210,255,0.95)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+c2x*pxPerDeg, cy+c2y*pxPerDeg, 3, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,180,120,0.95)'; ctx.fill();
+
+    // Intersection of the two major-axis lines — the actual stereo-reconstructed
+    // direction, found geometrically rather than guessed per-telescope.
+    const d1x=Math.cos(a1), d1y=Math.sin(a1), d2x=Math.cos(a2), d2y=Math.sin(a2);
+    const denom = d1x*d2y - d1y*d2x;
+    if (Math.abs(denom) > 1e-4) {
+      const tt = ((c2x-c1x)*d2y - (c2y-c1y)*d2x)/denom;
+      const ix = c1x + tt*d1x, iy = c1y + tt*d1y;
+      const ixPx = cx+ix*pxPerDeg, iyPx = cy+iy*pxPerDeg;
+      ctx.beginPath(); ctx.arc(ixPx,iyPx,5,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(ixPx-8,iyPx); ctx.lineTo(ixPx+8,iyPx); ctx.moveTo(ixPx,iyPx-8); ctx.lineTo(ixPx,iyPx+8);
+      ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=1.2; ctx.stroke();
+      ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle='rgba(255,255,255,0.9)';
+      ctx.fillText('stereo direction', ixPx+11, iyPx-16);
+      const stereoTheta2 = (ix-srcX)*(ix-srcX)+(iy-srcY)*(iy-srcY);
+      ctx.fillText(`\u03b8\u00b2 = ${stereoTheta2.toFixed(4)} deg\u00b2`, ixPx+11, iyPx-4);
+    } else {
+      ctx.font='10px "Share Tech Mono", monospace'; ctx.fillStyle='rgba(255,180,120,0.85)';
+      ctx.fillText('axes nearly parallel \u2014 increase Tel. 2 azimuth separation', cx-150, cy+2.9*pxPerDeg+16);
+    }
+
+    const srcXpx = cx+srcX*pxPerDeg, srcYpx = cy+srcY*pxPerDeg;
+    ctx.beginPath(); ctx.moveTo(srcXpx-7,srcYpx); ctx.lineTo(srcXpx+7,srcYpx); ctx.moveTo(srcXpx,srcYpx-7); ctx.lineTo(srcXpx,srcYpx+7);
+    ctx.strokeStyle = 'rgba(255,220,120,0.9)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(srcXpx,srcYpx,9,0,Math.PI*2); ctx.strokeStyle='rgba(255,220,120,0.6)'; ctx.lineWidth=1; ctx.stroke();
+    ctx.font = '9px "Share Tech Mono", monospace'; ctx.fillStyle = 'rgba(255,220,120,0.8)';
+    ctx.fillText('assumed source', srcXpx+11, srcYpx+20);
+  }
+
+  if (!h1.triggered || !h2.triggered) {
+    ctx.font = '11px "Share Tech Mono", monospace'; ctx.fillStyle='rgba(255,160,140,0.85)';
+    ctx.fillText('NO STEREO TRIGGER \u2014 one or both telescopes outside light pool', cx-165, cy+2.9*pxPerDeg+16);
+  } else if (revealNow > 0.5) {
+    ctx.font = '11px "Share Tech Mono", monospace'; ctx.fillStyle='rgba(150,255,190,0.85)';
+    ctx.fillText('STEREO TRIGGER', cx-48, cy+2.9*pxPerDeg+16);
+  }
+
+  ctx.restore();
+}
 
 let drawing       = false;
 let drawPtsWorld  = [];
@@ -4699,6 +4902,11 @@ document.getElementById('btn-iact-ptype').addEventListener('click', function() {
   this.textContent = 'Type: ' + IACT_PTYPE_LABEL[iact.ptype];
 });
 
+document.getElementById('btn-iact-origin').addEventListener('click', function() {
+  iact.fireOrigin = (iact.fireOrigin === 'on') ? 'off' : 'on';
+  this.textContent = 'Fire from: ' + (iact.fireOrigin === 'on' ? 'ON source' : 'OFF (background)');
+});
+
 document.getElementById('btn-iact-fire').addEventListener('click', function() {
   iact.firing = true;
   iact.fireT = 0;
@@ -4717,41 +4925,60 @@ document.getElementById('btn-iact-fire5').addEventListener('click', () => {
 });
 
 document.getElementById('btn-iact-reset').addEventListener('click', () => {
-  iact.energyGeV = 300; iact.impactM = 60; iact.attackDeg = 0; iact.ptype = 'gamma';
+  iact.energyGeV = 300; iact.impactM = 60; iact.attackDeg = 0; iact.ptype = 'gamma'; iact.fireOrigin = 'on';
   iact.firing = false; iact.fireT = 0; iact.hillas = null; iact.branches = []; iact.subshowers = [];
-  iact.landedEvents = []; iact.queueRemaining = 0;
+  iact.landedEvents = []; iact.queueRemaining = 0; iact.impactM2 = 90; iact.stereoCache = null; iact.tel2AzimuthDeg = 70;
   document.getElementById('sl-iact-energy').value = 250;
   document.getElementById('sv-iact-energy').textContent = iactFmtEnergy(250);
   document.getElementById('sl-iact-impact').value = 60;
   document.getElementById('sv-iact-impact').textContent = '60 m';
   document.getElementById('sl-iact-attack').value = 0;
   document.getElementById('sv-iact-attack').textContent = '0°';
+  document.getElementById('sl-iact-impact2').value = 90;
+  document.getElementById('sv-iact-impact2').textContent = '90 m';
+  document.getElementById('sl-iact-tel2az').value = 70;
+  document.getElementById('sv-iact-tel2az').textContent = '70°';
   document.getElementById('btn-iact-ptype').textContent = 'Type: Gamma ray';
+  document.getElementById('btn-iact-origin').textContent = 'Fire from: ON source';
   document.getElementById('btn-iact-fire').textContent = 'Fire Shower';
+  setIACTNTel(1);
   updateIACTReadouts();
 });
 
-const IACT_SINGLE_PANELS = ['iact-single-controls','iact-single-controls2','iact-single-controls3','iact-hillas-section','iact-single-controls4'];
+const IACT_SINGLE_PANELS = ['iact-single-controls','iact-single-controls2','iact-single-controls3','iact-hillas-section','iact-cuts-section','iact-single-controls4'];
 const IACT_WOBBLE_PANELS = ['iact-wobble-controls','iact-wobble-readout','iact-wobble-controls2'];
-const IACT_STEREO_PANELS = ['iact-stereo-controls'];
 function setIACTView(v) {
   iact.view = v;
   document.getElementById('btn-iact-view-single').classList.toggle('active', v==='single');
   document.getElementById('btn-iact-view-wobble').classList.toggle('active', v==='wobble');
-  document.getElementById('btn-iact-view-stereo').classList.toggle('active', v==='stereo');
   for (const id of IACT_SINGLE_PANELS) document.getElementById(id).style.display = (v==='single') ? '' : 'none';
   for (const id of IACT_WOBBLE_PANELS) document.getElementById(id).style.display = (v==='wobble') ? '' : 'none';
-  for (const id of IACT_STEREO_PANELS) document.getElementById(id).style.display = (v==='stereo') ? '' : 'none';
-  if (v==='single' && iact.hillas) document.getElementById('iact-hillas-section').style.display = '';
-  else if (v==='single') document.getElementById('iact-hillas-section').style.display = 'none';
+  document.getElementById('iact-tel2-controls').style.display = (v==='single' && iact.nTel===2) ? '' : 'none';
+  if (v==='single' && iact.hillas) {
+    document.getElementById('iact-hillas-section').style.display = '';
+    document.getElementById('iact-cuts-section').style.display = (iact.hillas.ptype!=='muon') ? '' : 'none';
+  } else if (v==='single') {
+    document.getElementById('iact-hillas-section').style.display = 'none';
+    document.getElementById('iact-cuts-section').style.display = 'none';
+  }
   if (v==='wobble') updateWobbleReadouts();
 }
 document.getElementById('btn-iact-view-single').addEventListener('click', () => setIACTView('single'));
 document.getElementById('btn-iact-view-wobble').addEventListener('click', () => setIACTView('wobble'));
-document.getElementById('btn-iact-view-stereo').addEventListener('click', () => setIACTView('stereo'));
 
-wireSlider('sl-iact-impact2',  'sv-iact-impact2',  ()=>90, v=>{ iact.impactM2=v; },    v=>`${v} m`);
-wireSlider('sl-iact-tel2angle','sv-iact-tel2angle',()=>90, v=>{ iact.tel2AngleDeg=v; }, v=>`${v}°`);
+// 1 vs 2 telescope toggle — same single-event interface either way, just with a
+// second telescope (own impact distance, own sightlines, own full camera panel).
+function setIACTNTel(n) {
+  iact.nTel = n;
+  document.getElementById('btn-iact-ntel1').classList.toggle('active', n===1);
+  document.getElementById('btn-iact-ntel2').classList.toggle('active', n===2);
+  document.getElementById('iact-tel2-controls').style.display = (n===2 && iact.view==='single') ? '' : 'none';
+}
+document.getElementById('btn-iact-ntel1').addEventListener('click', () => setIACTNTel(1));
+document.getElementById('btn-iact-ntel2').addEventListener('click', () => setIACTNTel(2));
+
+wireSlider('sl-iact-impact2', 'sv-iact-impact2', ()=>90, v=>{ iact.impactM2=v; }, v=>`${v} m`);
+wireSlider('sl-iact-tel2az', 'sv-iact-tel2az', ()=>70, v=>{ iact.tel2AzimuthDeg=v; }, v=>`${v}°`);
 
 document.getElementById('btn-iact-wobble').addEventListener('click', function() {
   iact.wobbleOn = !iact.wobbleOn;
