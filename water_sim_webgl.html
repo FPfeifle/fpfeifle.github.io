@@ -225,6 +225,19 @@
     font-family: 'Share Tech Mono', monospace;
     font-size: 11.5px;
   }
+  .panel-select {
+    width: 100%;
+    background: #0a1622;
+    color: var(--val);
+    border: 1px solid #1c3348;
+    border-radius: 4px;
+    padding: 7px 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11.5px;
+  }
+  #water-preset-note {
+    font-size: 9.5px; color: var(--label); line-height: 1.4; margin-top: 6px;
+  }
 
   .readout-row {
     display: flex;
@@ -281,6 +294,19 @@
   </div>
 
   <div id="panel-water">
+
+  <div class="panel-section">
+    <div class="section-title">Preset Scenes</div>
+    <select id="water-preset-select" class="panel-select">
+      <option value="none">— draw your own —</option>
+      <option value="double-slit">Double-slit experiment</option>
+      <option value="single-slit">Single-slit diffraction</option>
+      <option value="grating">Diffraction grating (5 slits)</option>
+      <option value="two-source">Two-source interference</option>
+      <option value="parabola">Parabolic reflector</option>
+    </select>
+    <div id="water-preset-note">Loads a pre-drawn wall/emitter layout. Turn "Waves: ON" off if it's on, so you can see the interference clearly — the emitter line drives itself continuously once loaded.</div>
+  </div>
 
   <div class="panel-section">
     <div class="section-title">Camera</div>
@@ -1498,7 +1524,9 @@ if (!USE_WEBGL) {
 //  CPU FALLBACK ENGINE
 // ═══════════════════════════════════════════════════════════════════
 let cpu_h0, cpu_h1, cpu_vel, cpu_hPrev, cpu_obsMask, cpu_emitMask;
+let cpu_obsCoverage, cpu_emitCoverage; // fractional (0..1) edge coverage, for AA shading only
 let cpu_imageData, cpu_pixBuf, cpu_ctx;
+let cpu_colR, cpu_colG, cpu_colB; // per-grid-cell shaded color, bilinearly upscaled to canvas res
 
 function cpu_initArrays() {
   const N = GRID * GRID;
@@ -1508,6 +1536,11 @@ function cpu_initArrays() {
   cpu_hPrev   = new Float32Array(N);
   cpu_obsMask = new Uint8Array(N);
   cpu_emitMask= new Uint8Array(N);
+  cpu_obsCoverage  = new Float32Array(N);
+  cpu_emitCoverage = new Float32Array(N);
+  cpu_colR    = new Float32Array(N);
+  cpu_colG    = new Float32Array(N);
+  cpu_colB    = new Float32Array(N);
 }
 
 // ── Directional jet ("hose") influence — shared logic for CPU path ──
@@ -1544,8 +1577,8 @@ function jetInfluence(wx, wy, time) {
 
 function cpu_initCanvas() {
   if (!cpu_ctx) cpu_ctx = canvas.getContext('2d');
-  if (imgW > 0 && imgH > 0) {
-    cpu_imageData = cpu_ctx.createImageData(imgW, imgH);
+  if (canvas.width > 0 && canvas.height > 0) {
+    cpu_imageData = cpu_ctx.createImageData(canvas.width, canvas.height);
     cpu_pixBuf = cpu_imageData.data;
   }
 }
@@ -1553,7 +1586,13 @@ function cpu_initCanvas() {
 const CPU_TENSION = 0.22, CPU_DAMP = 0.993;
 const CPU_TENSION_MIN = 0.02, CPU_TENSION_MAX = 0.24;
 
-function cpu_stepPDE() {
+function cpu_stepPDE(gridSpeedFactor) {
+  gridSpeedFactor = gridSpeedFactor || 1;
+  // Softer per-substep damping when we're taking more substeps to cover the
+  // same world-distance (see the call site in loop()) — otherwise the extra
+  // substeps needed at high resolution would ALSO mean extra energy loss,
+  // making waves fade faster the higher the resolution is set.
+  const effDamp = Math.pow(CPU_DAMP, 1/gridSpeedFactor);
   cpu_hPrev.set(cpu_h0);
   const hasJets = state.jets.length > 0;
   for (let r = 1; r < GRID-1; r++) {
@@ -1570,7 +1609,7 @@ function cpu_stepPDE() {
       }
       const tension = Math.max(CPU_TENSION_MIN, Math.min(CPU_TENSION_MAX, CPU_TENSION / Math.max(0.05, rho)));
       const lap = cpu_h0[(r-1)*GRID+c]+cpu_h0[(r+1)*GRID+c]+cpu_h0[r*GRID+(c-1)]+cpu_h0[r*GRID+(c+1)]-4*cpu_h0[i];
-      cpu_vel[i] = (cpu_vel[i] + tension*lap)*CPU_DAMP;
+      cpu_vel[i] = (cpu_vel[i] + tension*lap)*effDamp;
       let hNew = cpu_h0[i] + cpu_vel[i];
       if (jetEff > 0) hNew = hNew*(1-0.4*jetEff) + jetDrive*(0.4*jetEff);
       cpu_h1[i] = hNew;
@@ -1607,9 +1646,10 @@ function cpu_render() {
   if (!cpu_ctx || !cpu_pixBuf) return;
   const n = Math.round(state.waveCount);
   const [lr,lg,lb] = cpu_kelvinRGB(state.colorTemp);
-  const scaleX = imgW/GRID, scaleY = imgH/GRID;
   const lhVal = state.lightHeight;
 
+  // Pass 1: shade one color per grid cell — identical math to before, just
+  // stored instead of stamped straight onto the canvas as a flat block.
   for (let r=0;r<GRID;r++) {
     for (let c=0;c<GRID;c++) {
       const i=r*GRID+c;
@@ -1621,11 +1661,7 @@ function cpu_render() {
           h+=wAmps[wi]*state.amplitude*Math.sin(wFreqs[wi]*(wDirs[wi*2]*wx+wDirs[wi*2+1]*wy)-wSpeeds[wi]*state.time+wPhases[wi]);
       }
       let rr,gg,bb;
-      if (cpu_obsMask[i]) { rr=90;gg=5;bb=5; }
-      else if (cpu_emitMask[i]) {
-        const t=Math.max(0,Math.min(1,cpu_h0[i]/Math.max(3*state.amplitude,1e-6)*0.5+0.5));
-        rr=0;gg=Math.round((t*0.9+(1-t)*0.2)*255);bb=Math.round((t+(1-t)*0.4)*255);
-      } else {
+      {
         const hl=c>0?cpu_h0[i-1]:h, hr2=c<GRID-1?cpu_h0[i+1]:h;
         const hu=r>0?cpu_h0[(r-1)*GRID+c]:h, hd=r<GRID-1?cpu_h0[(r+1)*GRID+c]:h;
         const sc=GRID/(2*VIEW);
@@ -1643,66 +1679,139 @@ function cpu_render() {
         const lap=(hl+hr2+hu+hd-4*h);
         const caus=Math.pow(Math.max(0,Math.min(1,-lap*4)),2);
         const diff=NdotL*atten*0.30, sp=spec*atten*1.3, ca2=caus*0.45;
-        const encode=v=>Math.round(Math.pow(Math.max(0,Math.min(1,v)),1/2.2)*255);
+        const encode=v=>Math.pow(Math.max(0,Math.min(1,v)),1/2.2)*255;
         rr=encode(0.01+diff+(sp+ca2)*lr);
         gg=encode(0.05+diff+(sp+ca2)*lg);
         bb=encode(0.16+diff+(sp+ca2)*lb);
         if (state.jets.length) {
           const jetT = jetInfluence(wx, wy, state.time).effect * 0.18;
           if (jetT > 0) {
-            rr = Math.round(rr*(1-jetT) + 13*jetT);
-            gg = Math.round(gg*(1-jetT) + 89*jetT);
-            bb = Math.round(bb*(1-jetT) + 140*jetT);
+            rr = rr*(1-jetT) + 13*jetT;
+            gg = gg*(1-jetT) + 89*jetT;
+            bb = bb*(1-jetT) + 140*jetT;
           }
         }
+        // Blend in wall/emitter color by fractional coverage (not a hard
+        // per-cell switch) — boundary cells get a genuine partial mix, which
+        // is what makes the upscaled edge look soft instead of stair-stepped.
+        const obsCov = cpu_obsCoverage[i], emitCov = cpu_emitCoverage[i]*(1-obsCov);
+        if (emitCov > 0) {
+          const t=Math.max(0,Math.min(1,cpu_h0[i]/Math.max(3*state.amplitude,1e-6)*0.5+0.5));
+          const er=0, eg=(t*0.9+(1-t)*0.2)*255, eb=(t+(1-t)*0.4)*255;
+          rr = rr*(1-emitCov) + er*emitCov;
+          gg = gg*(1-emitCov) + eg*emitCov;
+          bb = bb*(1-emitCov) + eb*emitCov;
+        }
+        if (obsCov > 0) {
+          rr = rr*(1-obsCov) + 90*obsCov;
+          gg = gg*(1-obsCov) + 5*obsCov;
+          bb = bb*(1-obsCov) + 5*obsCov;
+        }
       }
-      // Write pixel block (scale grid to canvas)
-      const px0=Math.round(c*scaleX), px1=Math.round((c+1)*scaleX);
-      const py0=Math.round((GRID-1-r)*scaleY), py1=Math.round((GRID-r)*scaleY); // flip Y for display
-      for (let py=py0;py<py1;py++) for (let px=px0;px<px1;px++) {
-        if(px<0||px>=imgW||py<0||py>=imgH) continue;
-        const bi=(py*imgW+px)*4;
-        cpu_pixBuf[bi]=rr;cpu_pixBuf[bi+1]=gg;cpu_pixBuf[bi+2]=bb;cpu_pixBuf[bi+3]=255;
-      }
+      cpu_colR[i]=rr; cpu_colG[i]=gg; cpu_colB[i]=bb;
+    }
+  }
+
+  // Pass 2: bilinear-upscale the per-cell colors onto the canvas-resolution
+  // pixel buffer instead of nearest-neighbor block-copying each cell — this
+  // is what turns blocky grid cells (walls, emitters, small ripples) into
+  // smooth, anti-aliased edges. Uses the actual backing-buffer size (which
+  // may be a device-pixel-ratio multiple of imgW/imgH), not imgW/imgH itself.
+  const W = canvas.width, H = canvas.height;
+  const gxScale = GRID/W, gyScale = GRID/H;
+  for (let py=0; py<H; py++) {
+    let gy = (GRID-1) - (py+0.5)*gyScale;
+    if (gy < 0) gy = 0; if (gy > GRID-1.0001) gy = GRID-1.0001;
+    const gy0 = Math.floor(gy), fy = gy-gy0, gy1 = gy0+1;
+    const rowBase0 = gy0*GRID, rowBase1 = gy1*GRID;
+    const rowOff = py*W;
+    for (let px=0; px<W; px++) {
+      let gx = (px+0.5)*gxScale;
+      if (gx < 0) gx = 0; if (gx > GRID-1.0001) gx = GRID-1.0001;
+      const gx0 = Math.floor(gx), fx = gx-gx0, gx1 = gx0+1;
+      const i00=rowBase0+gx0, i10=rowBase0+gx1, i01=rowBase1+gx0, i11=rowBase1+gx1;
+      const w00=(1-fx)*(1-fy), w10=fx*(1-fy), w01=(1-fx)*fy, w11=fx*fy;
+      const bi=(rowOff+px)*4;
+      cpu_pixBuf[bi]   = cpu_colR[i00]*w00+cpu_colR[i10]*w10+cpu_colR[i01]*w01+cpu_colR[i11]*w11;
+      cpu_pixBuf[bi+1] = cpu_colG[i00]*w00+cpu_colG[i10]*w10+cpu_colG[i01]*w01+cpu_colG[i11]*w11;
+      cpu_pixBuf[bi+2] = cpu_colB[i00]*w00+cpu_colB[i10]*w10+cpu_colB[i01]*w01+cpu_colB[i11]*w11;
+      cpu_pixBuf[bi+3] = 255;
     }
   }
   cpu_ctx.putImageData(cpu_imageData,0,0);
 }
 
 function cpu_addRipple(wx, wy) {
-  const col=Math.floor((wx+VIEW)/(2*VIEW)*GRID);
-  const row=Math.floor((wy+VIEW)/(2*VIEW)*GRID);
-  const r=Math.max(2,Math.round(GRID/80));
+  // Keep the exact (fractional) click position instead of snapping to the
+  // nearest grid cell first — snapping was adding its own extra quantization
+  // on top of the grid's, which is especially visible for a stamp this small.
+  const gx=(wx+VIEW)/(2*VIEW)*(GRID-1);
+  const gy=(wy+VIEW)/(2*VIEW)*(GRID-1);
+  const col=Math.round(gx), row=Math.round(gy);
+  const r=Math.max(3,Math.round(GRID/55));
   if(col<r+1||col>=GRID-r-1||row<r+1||row>=GRID-r-1) return;
   const s=3.0*state.amplitude;
   for(let dr=-r;dr<=r;dr++) for(let dc=-r;dc<=r;dc++) {
-    if(dr*dr+dc*dc>r*r) continue;
-    cpu_h0[(row+dr)*GRID+(col+dc)]+=s*(1-Math.sqrt(dr*dr+dc*dc)/(r+1));
+    const dist=Math.hypot((row+dr)-gy, (col+dc)-gx);
+    if(dist>r) continue;
+    // Raised-cosine bump (smooth center + smooth rim) instead of a linear cone.
+    cpu_h0[(row+dr)*GRID+(col+dc)]+=s*0.5*(1+Math.cos(Math.PI*dist/r));
   }
 }
 
 function cpu_commitShape(worldPts) {
   if(worldPts.length<2) return;
   const thickPx=Math.max(2,Math.round(GRID/150));
-  const mask=cpu_rasterisePolyline(worldPts,thickPx);
+  const cov=rasterisePolylineCoverage(worldPts,thickPx);
   for(let i=0;i<GRID*GRID;i++) {
-    if(!mask[i]) continue;
-    if(state.drawMode==='wall'){cpu_obsMask[i]=1;cpu_emitMask[i]=0;cpu_h0[i]=0;cpu_vel[i]=0;}
-    else{cpu_emitMask[i]=1;cpu_obsMask[i]=0;}
+    if(cov[i]<=0) continue;
+    if(state.drawMode==='wall'){
+      cpu_obsMask[i]=1; cpu_emitMask[i]=0; cpu_h0[i]=0; cpu_vel[i]=0;
+      cpu_obsCoverage[i]=Math.max(cpu_obsCoverage[i],cov[i]); cpu_emitCoverage[i]=0;
+    } else {
+      cpu_emitMask[i]=1; cpu_obsMask[i]=0;
+      cpu_emitCoverage[i]=Math.max(cpu_emitCoverage[i],cov[i]); cpu_obsCoverage[i]=0;
+    }
   }
 }
 
-function cpu_rasterisePolyline(worldPts,thickness) {
-  const mask=new Uint8Array(GRID*GRID);
-  function w2g(wx,wy){return[Math.max(0,Math.min(GRID-1,Math.floor((wx+VIEW)/(2*VIEW)*(GRID-1)))),Math.max(0,Math.min(GRID-1,Math.floor((wy+VIEW)/(2*VIEW)*(GRID-1))))];}
-  function bresen(c0,r0,c1,r1,cb){let dc=Math.abs(c1-c0),dr=Math.abs(r1-r0);const sc=c1>c0?1:-1,sr=r1>r0?1:-1;let err=dc-dr;for(;;){cb(c0,r0);if(c0===c1&&r0===r1)break;const e2=2*err;if(e2>-dr){err-=dr;c0+=sc;}if(e2<dc){err+=dc;r0+=sr;}}}
-  for(let i=0;i<worldPts.length-1;i++){const[c0,r0]=w2g(...worldPts[i]);const[c1,r1]=w2g(...worldPts[i+1]);bresen(c0,r0,c1,r1,(c,r)=>{for(let dr2=-thickness;dr2<=thickness;dr2++)for(let dc2=-thickness;dc2<=thickness;dc2++){const rc=Math.max(0,Math.min(GRID-1,r+dr2)),cc=Math.max(0,Math.min(GRID-1,c+dc2));mask[rc*GRID+cc]=1;}});}
-  return mask;
+// Shared by both render paths: rasterizes a stroked polyline into a per-cell
+// COVERAGE buffer (0..1) using the exact distance from each cell center to
+// the nearest line segment, instead of stamping whole cells in/out along a
+// Bresenham walk. Cells right at the boundary get a fractional value (a
+// ~1-cell-wide analytic AA ramp) rather than jumping straight from 0 to 1,
+// which is what actually lets the shading pass draw a soft edge — physics
+// (which cells block the wave) still thresholds this at 0.5, unaffected.
+function rasterisePolylineCoverage(worldPts, thickness) {
+  const cov = new Float32Array(GRID*GRID);
+  const pts = worldPts.map(([wx,wy]) => [(wx+VIEW)/(2*VIEW)*(GRID-1), (wy+VIEW)/(2*VIEW)*(GRID-1)]);
+  const pad = thickness + 1;
+  for (let s = 0; s < pts.length-1; s++) {
+    const [x0,y0] = pts[s], [x1,y1] = pts[s+1];
+    const cMin = Math.max(0, Math.floor(Math.min(x0,x1)-pad));
+    const cMax = Math.min(GRID-1, Math.ceil(Math.max(x0,x1)+pad));
+    const rMin = Math.max(0, Math.floor(Math.min(y0,y1)-pad));
+    const rMax = Math.min(GRID-1, Math.ceil(Math.max(y0,y1)+pad));
+    const dx = x1-x0, dy = y1-y0;
+    const segLen2 = Math.max(1e-9, dx*dx+dy*dy);
+    for (let r = rMin; r <= rMax; r++) {
+      for (let c = cMin; c <= cMax; c++) {
+        let t = ((c-x0)*dx + (r-y0)*dy) / segLen2;
+        t = t < 0 ? 0 : (t > 1 ? 1 : t);
+        const dist = Math.hypot(c-(x0+t*dx), r-(y0+t*dy));
+        const covHere = Math.max(0, Math.min(1, thickness + 0.5 - dist));
+        const idx = r*GRID+c;
+        if (covHere > cov[idx]) cov[idx] = covHere;
+      }
+    }
+  }
+  return cov;
 }
 
 function cpu_reset() {
   cpu_h0.fill(0);cpu_h1.fill(0);cpu_vel.fill(0);cpu_hPrev.fill(0);
   cpu_obsMask.fill(0);cpu_emitMask.fill(0);
+  cpu_obsCoverage.fill(0);cpu_emitCoverage.fill(0);
   state.jets.length = 0;
 }
 
@@ -1904,19 +2013,42 @@ vec3 buildCamPos() {
   return vec3(d*sin(tr)*sin(ar), -d*sin(tr)*cos(ar), d*cos(tr));
 }
 
+// Manual bilinear lookup into the (NEAREST-filtered) wave height texture.
+// Doing this ourselves means smooth sampling never depends on whether the
+// GPU/driver actually honours LINEAR filtering on a floating-point texture.
+float sampleWave(vec2 uv) {
+  vec2 tc   = uv / u_texel - 0.5;
+  vec2 base = floor(tc);
+  vec2 f    = tc - base;
+  vec2 uv00 = (base + 0.5) * u_texel;
+  float h00 = texture2D(u_wave, uv00).r;
+  float h10 = texture2D(u_wave, uv00 + vec2(u_texel.x, 0.0)).r;
+  float h01 = texture2D(u_wave, uv00 + vec2(0.0, u_texel.y)).r;
+  float h11 = texture2D(u_wave, uv00 + vec2(u_texel.x, u_texel.y)).r;
+  return mix(mix(h00, h10, f.x), mix(h01, h11, f.x), f.y);
+}
+
 void main() {
   vec2 uv   = v_uv;
   vec4 mask = texture2D(u_mask, uv);
-  float isObs  = step(0.5, mask.r);
-  float isEmit = step(0.5, mask.g);
+  // Smooth (anti-aliased) occupancy instead of a hard threshold — the mask
+  // texture already carries a linear-filtered gradient across a wall/emitter
+  // edge; step() was throwing that gradient away and re-creating a hard,
+  // blocky boundary. Blending over a narrow band turns it back into a soft edge.
+  float obsAmt  = smoothstep(0.35, 0.65, mask.r);
+  float emitAmt = smoothstep(0.35, 0.65, mask.g) * (1.0 - obsAmt);
   vec2 world   = (uv * 2.0 - 1.0) * VIEW;
 
-  // Wave heights
-  float h  = texture2D(u_wave, uv).r;
-  float hl = texture2D(u_wave, uv - vec2(u_texel.x, 0.0)).r;
-  float hr = texture2D(u_wave, uv + vec2(u_texel.x, 0.0)).r;
-  float hu = texture2D(u_wave, uv - vec2(0.0, u_texel.y)).r;
-  float hd = texture2D(u_wave, uv + vec2(0.0, u_texel.y)).r;
+  // Manually bilinear-sample the height field ourselves rather than trust
+  // hardware filtering on a floating-point texture (LINEAR on FLOAT textures
+  // is only well-defined with OES_texture_float_linear, which isn't universal —
+  // without it some GPUs silently fall back to NEAREST, which is exactly what
+  // makes ripples look blocky). This works the same everywhere.
+  float h  = sampleWave(uv);
+  float hl = sampleWave(uv - vec2(u_texel.x, 0.0));
+  float hr = sampleWave(uv + vec2(u_texel.x, 0.0));
+  float hu = sampleWave(uv - vec2(0.0, u_texel.y));
+  float hd = sampleWave(uv + vec2(0.0, u_texel.y));
 
   // Background Gerstner waves
   if (u_bgWaves == 1) {
@@ -1940,18 +2072,11 @@ void main() {
   float dzdy = (hd - hu) * 0.5 / (u_texel.y * 2.0 * VIEW);
   vec3 N = normalize(vec3(-dzdx, -dzdy, 1.0));
 
-  // Obstacle
-  if (isObs > 0.5) {
-    gl_FragColor = vec4(pow(vec3(0.35, 0.02, 0.02), vec3(1.0/2.2)), 1.0);
-    return;
-  }
-  // Emitter
-  if (isEmit > 0.5) {
-    float t = clamp(h / max(3.0*u_amplitude, 0.001)*0.5+0.5, 0.0, 1.0);
-    vec3 col = vec3(0.0, t*0.9+(1.0-t)*0.2, t+(1.0-t)*0.4);
-    gl_FragColor = vec4(pow(col, vec3(1.0/2.2)), 1.0);
-    return;
-  }
+  // Obstacle / emitter colors — computed unconditionally so they can be
+  // smoothly blended in at the end instead of hard-cutting the water away.
+  vec3 obsColor = pow(vec3(0.35, 0.02, 0.02), vec3(1.0/2.2));
+  float et = clamp(h / max(3.0*u_amplitude, 0.001)*0.5+0.5, 0.0, 1.0);
+  vec3 emitColor = pow(vec3(0.0, et*0.9+(1.0-et)*0.2, et+(1.0-et)*0.4), vec3(1.0/2.2));
 
   // Light
   vec3 L; float ldist;
@@ -1984,7 +2109,11 @@ void main() {
   float jetEffect, jetDrive;
   jetInfluence(world, jetEffect, jetDrive);
   col = mix(col, vec3(0.05, 0.35, 0.55), jetEffect * 0.18);
-  gl_FragColor = vec4(pow(col, vec3(1.0/2.2)), 1.0);
+  vec3 waterColor = pow(col, vec3(1.0/2.2));
+
+  vec3 finalColor = mix(waterColor, emitColor, emitAmt);
+  finalColor = mix(finalColor, obsColor, obsAmt);
+  gl_FragColor = vec4(finalColor, 1.0);
 }
 `;
 
@@ -2018,11 +2147,12 @@ let texCurr, texPrev, fbCurr, fbPrev;
 let maskData;
 let FLOAT_TYPE = null;
 
-function makeTexture(w, h, data, type, format) {
+function makeTexture(w, h, data, type, format, filter) {
   const t = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, t);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  const f = filter || gl.LINEAR;
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, f);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, f);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   gl.texImage2D(gl.TEXTURE_2D, 0, format || gl.RGBA, w, h, 0, format || gl.RGBA, type || gl.UNSIGNED_BYTE, data || null);
@@ -2050,8 +2180,12 @@ function initGL() {
   maskData = new Uint8Array(GRID * GRID * 4);
 
   // Two float textures for ping-pong; each stores r=hCurr, g=hPrev
-  texA     = makeTexture(GRID, GRID, null, gl.FLOAT, gl.RGBA);
-  texB     = makeTexture(GRID, GRID, null, gl.FLOAT, gl.RGBA);
+  // NEAREST here on purpose: the PDE step needs exact texel reads for its
+  // finite-difference stencil, and the shading pass now does its own manual
+  // bilinear lookup (sampleWave) instead of relying on hardware float-texture
+  // filtering, which isn't reliably supported everywhere.
+  texA     = makeTexture(GRID, GRID, null, gl.FLOAT, gl.RGBA, gl.NEAREST);
+  texB     = makeTexture(GRID, GRID, null, gl.FLOAT, gl.RGBA, gl.NEAREST);
   texMask  = makeTexture(GRID, GRID, maskData, gl.UNSIGNED_BYTE, gl.RGBA);
   texShade = makeTexture(GRID, GRID, null, gl.UNSIGNED_BYTE, gl.RGBA);
 
@@ -2122,7 +2256,12 @@ const TENSION = 0.22;
 const DAMP    = 0.014; // energy loss per step
 const TENSION_MIN = 0.02, TENSION_MAX = 0.24;
 
-function stepPDE() {
+function stepPDE(gridSpeedFactor) {
+  gridSpeedFactor = gridSpeedFactor || 1;
+  // See cpu_stepPDE for why: softer per-substep damping when more substeps
+  // are being taken to cover the same world-distance at higher resolution.
+  const effDamp = 1 - Math.pow(1 - DAMP, 1/gridSpeedFactor);
+
   // Read texCurr (has r=hC, g=hP), write new state into fbPrev, then swap
   gl.bindFramebuffer(gl.FRAMEBUFFER, fbPrev);
   gl.viewport(0, 0, GRID, GRID);
@@ -2134,7 +2273,7 @@ function stepPDE() {
 
   u2f(progPDE, 'u_texel', 1/GRID, 1/GRID);
   u1f(progPDE, 'u_tension', TENSION);
-  u1f(progPDE, 'u_damp', DAMP);
+  u1f(progPDE, 'u_damp', effDamp);
   u1f(progPDE, 'u_drive', 3.0 * state.amplitude * Math.sin(2.5 * state.time));
   u1i(progPDE, 'u_openEdges', state.openEdges ? 1 : 0);
   u1f(progPDE, 'u_ambientDensity', state.ambientDensity);
@@ -2160,12 +2299,24 @@ function resizeCanvas() {
   const rect = canvas.getBoundingClientRect();
   imgW = Math.floor(rect.width);
   imgH = Math.floor(rect.height);
-  canvas.width  = imgW;
-  canvas.height = imgH;
+  // Render the actual water sim at device-pixel resolution (capped at 2x) —
+  // without this, on any high-DPI/Retina display the sim renders at CSS-pixel
+  // resolution and the browser has to stretch it to fill the physically
+  // denser screen, which is a real (if easy to miss) source of blur/softness
+  // on top of the grid-resolution effects fixed elsewhere. The overlay canvas
+  // (UI text, diagrams, everything drawn with plain 2D calls) stays at CSS
+  // resolution on purpose — rescaling it would mean touching every drawing
+  // call across every tab for no visible benefit, since text/line art there
+  // isn't the "pixely" complaint.
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const bufW = Math.max(1, Math.round(imgW * dpr));
+  const bufH = Math.max(1, Math.round(imgH * dpr));
+  canvas.width  = bufW;
+  canvas.height = bufH;
   overlayCanvas.width  = imgW;
   overlayCanvas.height = imgH;
   if (!USE_WEBGL && cpu_ctx) {
-    cpu_imageData = cpu_ctx.createImageData(imgW, imgH);
+    cpu_imageData = cpu_ctx.createImageData(bufW, bufH);
     cpu_pixBuf = cpu_imageData.data;
   }
 }
@@ -2223,7 +2374,7 @@ function render() {
 
   // Blit shaded texture to screen
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  gl.viewport(0, 0, imgW, imgH);
+  gl.viewport(0, 0, canvas.width, canvas.height);
   gl.useProgram(progCopy);
   bindQuad(progCopy);
   setTex(progCopy, 'u_tex', 0, texShade);
@@ -2366,9 +2517,12 @@ function drawOverlays() {
 //  RIPPLE — patch the current height texture
 // ═══════════════════════════════════════════════════════════════════
 function addRipple(wx, wy) {
-  const col = Math.floor((wx + VIEW) / (2*VIEW) * GRID);
-  const row = Math.floor((wy + VIEW) / (2*VIEW) * GRID);
-  const r = Math.max(2, Math.round(GRID / 80));
+  // Keep the exact (fractional) click position instead of snapping to the
+  // nearest grid cell first — see cpu_addRipple for why.
+  const gx = (wx + VIEW) / (2*VIEW) * (GRID-1);
+  const gy = (wy + VIEW) / (2*VIEW) * (GRID-1);
+  const col = Math.round(gx), row = Math.round(gy);
+  const r = Math.max(3, Math.round(GRID / 55));
   if (col < r+1 || col >= GRID-r-1 || row < r+1 || row >= GRID-r-1) return;
 
   const x0 = Math.max(0, col - r - 1);
@@ -2384,12 +2538,15 @@ function addRipple(wx, wy) {
   const s = 3.0 * state.amplitude;
   for (let dr = -r; dr <= r; dr++) {
     for (let dc = -r; dc <= r; dc++) {
-      if (dr*dr + dc*dc > r*r) continue;
+      const dist = Math.hypot((row+dr)-gy, (col+dc)-gx);
+      if (dist > r) continue;
       const pr = (row + dr) - y0;
       const pc = (col + dc) - x0;
       if (pr < 0 || pr >= ph || pc < 0 || pc >= pw) continue;
       const idx = (pr * pw + pc) * 4;
-      patch[idx] += s * (1.0 - Math.sqrt(dr*dr+dc*dc) / (r + 1)); // add to r=hCurr
+      // Raised-cosine bump: smooth at the center (no point) and at the rim
+      // (no seam), unlike a linear cone — reads as round rather than faceted.
+      patch[idx] += s * 0.5 * (1.0 + Math.cos(Math.PI * dist / r)); // add to r=hCurr
     }
   }
 
@@ -2415,57 +2572,18 @@ function clearMaskRegion(startIdx, count) {
   }
 }
 
-// ── Rasterise polyline into maskData ──────────────────────────────
-function rasterisePolyline(worldPts, thickness) {
-  const mask = new Uint8Array(GRID * GRID);
-
-  function w2g(wx, wy) {
-    return [
-      Math.max(0, Math.min(GRID-1, Math.floor((wx+VIEW)/(2*VIEW)*(GRID-1)))),
-      Math.max(0, Math.min(GRID-1, Math.floor((wy+VIEW)/(2*VIEW)*(GRID-1))))
-    ];
-  }
-
-  function bresenham(c0, r0, c1, r1, cb) {
-    let dc = Math.abs(c1-c0), dr = Math.abs(r1-r0);
-    const sc = c1>c0?1:-1, sr = r1>r0?1:-1;
-    let err = dc - dr;
-    while (true) {
-      cb(c0, r0);
-      if (c0===c1 && r0===r1) break;
-      const e2 = 2*err;
-      if (e2 > -dr) { err-=dr; c0+=sc; }
-      if (e2 <  dc) { err+=dc; r0+=sr; }
-    }
-  }
-
-  for (let i = 0; i < worldPts.length-1; i++) {
-    const [c0,r0] = w2g(...worldPts[i]);
-    const [c1,r1] = w2g(...worldPts[i+1]);
-    bresenham(c0, r0, c1, r1, (c, r) => {
-      for (let dr2 = -thickness; dr2 <= thickness; dr2++) {
-        for (let dc2 = -thickness; dc2 <= thickness; dc2++) {
-          const rc = Math.max(0, Math.min(GRID-1, r+dr2));
-          const cc = Math.max(0, Math.min(GRID-1, c+dc2));
-          mask[rc*GRID+cc] = 1;
-        }
-      }
-    });
-  }
-  return mask;
-}
-
 function commitShape(worldPts) {
   if (worldPts.length < 2) return;
   if (USE_WEBGL) {
     const thickPx = Math.max(2, Math.round(GRID / 150));
-    const m = rasterisePolyline(worldPts, thickPx);
+    const cov = rasterisePolylineCoverage(worldPts, thickPx);
     for (let i = 0; i < GRID*GRID; i++) {
-      if (!m[i]) continue;
+      if (cov[i] <= 0) continue;
+      const v = Math.round(cov[i]*255);
       if (state.drawMode === 'wall') {
-        maskData[i*4]=255; maskData[i*4+1]=0; maskData[i*4+2]=0; maskData[i*4+3]=255;
+        maskData[i*4]=v; maskData[i*4+1]=0; maskData[i*4+2]=0; maskData[i*4+3]=255;
       } else {
-        maskData[i*4]=0; maskData[i*4+1]=255; maskData[i*4+2]=0; maskData[i*4+3]=255;
+        maskData[i*4]=0; maskData[i*4+1]=v; maskData[i*4+2]=0; maskData[i*4+3]=255;
       }
     }
     uploadMask();
@@ -2473,6 +2591,94 @@ function commitShape(worldPts) {
     cpu_commitShape(worldPts);
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════
+//  PRESET SCENES — pre-drawn wall/emitter layouts for classic wave-
+//  physics demos, built entirely from the same commitShape() primitive
+//  a hand-drawn wall or emitter uses.
+// ═══════════════════════════════════════════════════════════════════
+function clearWallsAndEmitters() {
+  if (USE_WEBGL) {
+    maskData.fill(0);
+    uploadMask();
+  } else {
+    cpu_obsMask.fill(0); cpu_emitMask.fill(0);
+    cpu_obsCoverage.fill(0); cpu_emitCoverage.fill(0);
+  }
+}
+function presetWall(x0, y0, x1, y1) {
+  const saved = state.drawMode;
+  state.drawMode = 'wall';
+  commitShape([[x0,y0],[x1,y1]]);
+  state.drawMode = saved;
+}
+function presetEmitter(x0, y0, x1, y1) {
+  const saved = state.drawMode;
+  state.drawMode = 'emitter';
+  commitShape([[x0,y0],[x1,y1]]);
+  state.drawMode = saved;
+}
+// A short "point-like" emitter patch (commitShape needs >=2 points; a tiny
+// segment gets rounded end caps from the analytic rasterizer, so it comes
+// out roughly circular).
+function presetPointEmitter(x, y) {
+  presetEmitter(x, y-0.04, x, y+0.04);
+}
+// Barrier with evenly-centered gaps ("slits") cut out of it, built as
+// several solid wall segments so the gaps stay open.
+function presetBarrierWithSlits(x, yFrom, yTo, slitCenters, slitHalfWidth) {
+  const gaps = slitCenters.slice().sort((a,b)=>a-b).map(c => [c-slitHalfWidth, c+slitHalfWidth]);
+  let cursor = yFrom;
+  for (const [g0,g1] of gaps) {
+    if (g0 > cursor) presetWall(x, cursor, x, g0);
+    cursor = Math.max(cursor, g1);
+  }
+  if (cursor < yTo) presetWall(x, cursor, x, yTo);
+}
+function presetParabolaWall(x0, a, yFrom, yTo, steps) {
+  let prev = null;
+  for (let i = 0; i <= steps; i++) {
+    const y = yFrom + (yTo-yFrom)*i/steps;
+    const x = x0 + a*y*y;
+    if (prev) presetWall(prev[0], prev[1], x, y);
+    prev = [x, y];
+  }
+}
+
+function applyWaterPreset(name) {
+  clearWallsAndEmitters();
+  // The interference/diffraction patterns these scenes are built to show
+  // get visually drowned out by the decorative background swell, so switch
+  // it off automatically (matches what btn-waves toggles).
+  if (state.bgWaves) {
+    state.bgWaves = false;
+    const wb = document.getElementById('btn-waves');
+    wb.textContent = 'Waves: OFF'; wb.classList.remove('active');
+  }
+  const V = VIEW;
+  if (name === 'none') {
+    // just cleared — nothing else to do
+  } else if (name === 'double-slit') {
+    presetEmitter(-3.5, -4, -3.5, 4);
+    presetBarrierWithSlits(-0.5, -V, V, [0.6, -0.6], 0.3);
+  } else if (name === 'single-slit') {
+    presetEmitter(-3.5, -4, -3.5, 4);
+    presetBarrierWithSlits(-0.5, -V, V, [0], 0.4);
+  } else if (name === 'grating') {
+    presetEmitter(-3.5, -4, -3.5, 4);
+    presetBarrierWithSlits(-0.5, -V, V, [-2,-1,0,1,2], 0.15);
+  } else if (name === 'two-source') {
+    presetPointEmitter(-3, 0.6);
+    presetPointEmitter(-3, -0.6);
+  } else if (name === 'parabola') {
+    presetEmitter(1.5, -3, 1.5, 3);
+    presetParabolaWall(-4.2, 0.25, -3, 3, 48);
+  }
+}
+
+document.getElementById('water-preset-select').addEventListener('change', e => {
+  applyWaterPreset(e.target.value);
+});
 
 // ═══════════════════════════════════════════════════════════════════
 //  AGN SPINE-SHEATH JET — side-view diagram (drawn on the overlay canvas)
@@ -4518,7 +4724,10 @@ canvas.addEventListener('mouseup', e => {
     addJet(jetAimStart[0], jetAimStart[1], jetAimCurrent[0], jetAimCurrent[1]);
   } else if (e.button === 2 && drawing) {
     drawing = false;
-    if (drawPtsWorld.length >= 2) commitShape(drawPtsWorld);
+    if (drawPtsWorld.length >= 2) {
+      commitShape(drawPtsWorld);
+      document.getElementById('water-preset-select').value = 'none';
+    }
     drawPtsWorld = [];
   } else if (e.button === 0) {
     draggingLight = false;
@@ -4531,7 +4740,10 @@ canvas.addEventListener('mouseleave', () => {
     addJet(jetAimStart[0], jetAimStart[1], jetAimCurrent[0], jetAimCurrent[1]);
   }
   if (drawing) {
-    if (drawPtsWorld.length >= 2) commitShape(drawPtsWorld);
+    if (drawPtsWorld.length >= 2) {
+      commitShape(drawPtsWorld);
+      document.getElementById('water-preset-select').value = 'none';
+    }
     drawPtsWorld = [];
     drawing = false;
   }
@@ -4566,9 +4778,19 @@ function loop() {
   } else {
     if (!state.paused) {
       state.time += 0.04 * state.timeScale;
-      const steps = Math.max(1, Math.min(Math.round(state.timeScale), 20));
+      // The wave equation's discrete update (tension * Laplacian, unit grid
+      // spacing) covers a FIXED number of grid cells per substep regardless
+      // of GRID — so as resolution goes up and each cell covers less world
+      // distance, ripples travel slower and fade out sooner in world terms,
+      // which is why several clicks end up piling into one blob instead of
+      // spreading into distinct rings. Extra substeps (tuned relative to
+      // each path's own default resolution, where behavior is unchanged)
+      // compensate so the wave's real-world speed stays roughly constant.
+      const gridRef = USE_WEBGL ? 512 : 220;
+      const gridSpeedFactor = Math.max(1, Math.min(4, Math.round(GRID / gridRef)));
+      const steps = Math.max(1, Math.min(Math.round(state.timeScale), 20)) * gridSpeedFactor;
       for (let s = 0; s < steps; s++) {
-        if (USE_WEBGL) stepPDE(); else cpu_stepPDE();
+        if (USE_WEBGL) stepPDE(gridSpeedFactor); else cpu_stepPDE(gridSpeedFactor);
       }
       updateJetParticles(0.04 * state.timeScale);
     }
@@ -5017,6 +5239,7 @@ document.getElementById('btn-reset').addEventListener('click', () => {
     cpu_reset();
   }
   state.jets.length = 0; jetParticles = [];
+  document.getElementById('water-preset-select').value = 'none';
   state.lightXY = [2.0, 2.0];
   state.tilt = 0; state.azimuth = 30; state.time = 0;
   document.getElementById('sl-tilt').value = 0;       document.getElementById('sv-tilt').textContent = '0';
